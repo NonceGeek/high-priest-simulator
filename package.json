@@ -1,0 +1,30 @@
+{
+  "name": "high-priest-simulator-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "TS_NODE_PROJECT=tsconfig.server.json ts-node server.ts",
+    "build": "next build",
+    "start": "NODE_ENV=production TS_NODE_PROJECT=tsconfig.server.json ts-node server.ts",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^9.0.8",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
