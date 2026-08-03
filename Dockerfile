@@ -11,6 +11,8 @@ WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV="production"
+ENV PORT="8080"
+ENV HOSTNAME="0.0.0.0"
 
 # Install pnpm
 ARG PNPM_VERSION=latest
@@ -31,8 +33,8 @@ RUN pnpm install --frozen-lockfile --prod=false
 # Copy application code
 COPY . .
 
-# Build application
-RUN npx next build --experimental-build-mode compile
+# Build application (full build at image build time, not container start)
+RUN pnpm run build && pnpm run build:server
 
 # Remove development dependencies
 RUN pnpm prune --prod
@@ -48,5 +50,5 @@ COPY --from=build /app /app
 ENTRYPOINT [ "/app/docker-entrypoint.js" ]
 
 # Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
+EXPOSE 8080
 CMD [ "pnpm", "run", "start" ]

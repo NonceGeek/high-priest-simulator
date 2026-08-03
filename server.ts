@@ -4,8 +4,8 @@ import next from 'next';
 import { setupSocketServer } from './src/lib/socketServer';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = 3001;
+const hostname = process.env.HOSTNAME || '0.0.0.0';
+const port = Number(process.env.PORT) || 8080;
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -18,7 +18,7 @@ app.prepare().then(() => {
 
   setupSocketServer(server);
 
-  server.listen(port, () => {
+  server.listen(port, hostname, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
   });
 });

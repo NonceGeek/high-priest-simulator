@@ -16,6 +16,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["server.ts", "src/lib/**/*.ts"],
+  "include": ["server.ts", "src/lib/socketServer.ts", "src/lib/gameLogic.ts", "src/lib/types.ts"],
   "exclude": ["node_modules"]
 }
