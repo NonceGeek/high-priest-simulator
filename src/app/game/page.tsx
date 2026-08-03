@@ -34,15 +34,21 @@ export default function GamePage() {
     }
     
     onGameState((state: GameState) => {
-      setGameState(state);
-      localStorage.setItem('gameState', JSON.stringify(state));
-      
+      const withDraws = {
+        ...state,
+        nuwaDrawHistory: state.nuwaDrawHistory ?? [],
+      };
+      setGameState(withDraws);
+      localStorage.setItem('gameState', JSON.stringify(withDraws));
+      localStorage.setItem('nuwaDrawHistory', JSON.stringify(withDraws.nuwaDrawHistory));
+
       if (state.status === 'finished') {
         setTimeout(() => {
           if (confirm('游戏结束！是否返回大厅？')) {
             localStorage.removeItem('roomId');
             localStorage.removeItem('playerId');
             localStorage.removeItem('gameState');
+            localStorage.removeItem('nuwaDrawHistory');
             router.push('/');
           }
         }, 1000);
@@ -51,8 +57,13 @@ export default function GamePage() {
     
     socket.emit('getGameState', (state: GameState | null) => {
       if (state) {
-        setGameState(state);
-        localStorage.setItem('gameState', JSON.stringify(state));
+        const withDraws = {
+          ...state,
+          nuwaDrawHistory: state.nuwaDrawHistory ?? [],
+        };
+        setGameState(withDraws);
+        localStorage.setItem('gameState', JSON.stringify(withDraws));
+        localStorage.setItem('nuwaDrawHistory', JSON.stringify(withDraws.nuwaDrawHistory));
       } else {
         setError('无法获取游戏状态');
       }

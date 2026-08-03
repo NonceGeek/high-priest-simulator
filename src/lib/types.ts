@@ -15,11 +15,19 @@ export interface Captive {
 
 export interface Player {
   id: PlayerId;
+  nickname?: string;
   population: number;
   hand: Card[];
   discardPile: Card[];
   captives: Captive[];
   socketId?: string;
+}
+
+export interface NuwaDraw {
+  round: number;
+  playerId: PlayerId;
+  cardType: CardType;
+  cardId: string;
 }
 
 export interface GameState {
@@ -30,6 +38,8 @@ export interface GameState {
   winner: PlayerId | 'draw' | null;
   selectedActions: Record<PlayerId, Action | null>;
   gameLog: string[];
+  /** Both players' Nuwa draws — stored in full; console hides the opponent's card. */
+  nuwaDrawHistory: NuwaDraw[];
 }
 
 export type ActionType = 'card' | 'desperateStrike';

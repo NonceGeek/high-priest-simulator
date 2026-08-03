@@ -48,6 +48,7 @@ export function createGameState(roomId: string): GameState {
       player2: null,
     },
     gameLog: ['Game created. Waiting for players...'],
+    nuwaDrawHistory: [],
   };
 }
 
@@ -218,7 +219,18 @@ function applyAllEffects(
   p2.population = Math.max(0, p2.population);
 }
 
+/** Marker prefix so the client can filter opponent card names in the console. */
+export const NUWA_DRAW_LOG_PREFIX = '__NUWA_DRAW__';
+
+export function formatNuwaDrawLogMarker(playerId: PlayerId, cardType: CardType): string {
+  return `${NUWA_DRAW_LOG_PREFIX}|${playerId}|${cardType}`;
+}
+
 function handleCardDraw(state: GameState, playerId: PlayerId, log: string[]): void {
+  if (!state.nuwaDrawHistory) {
+    state.nuwaDrawHistory = [];
+  }
+
   const allDiscards = [...state.players.player1.discardPile, ...state.players.player2.discardPile];
   const eligibleCards = allDiscards.filter(c => c.type !== 'sacrificeNuwa');
   
@@ -231,8 +243,16 @@ function handleCardDraw(state: GameState, playerId: PlayerId, log: string[]): vo
     
     state.players.player1.discardPile = state.players.player1.discardPile.filter(c => c.id !== drawnCard.id);
     state.players.player2.discardPile = state.players.player2.discardPile.filter(c => c.id !== drawnCard.id);
-    
-    log.push(`${playerId} 抽取了 ${getCardName(drawnCard.type)}`);
+
+    state.nuwaDrawHistory.push({
+      round: state.currentRound,
+      playerId,
+      cardType: drawnCard.type,
+      cardId: drawnCard.id,
+    });
+
+    // Full draw info stays in nuwaDrawHistory / localStorage; log marker is filtered per viewer.
+    log.push(formatNuwaDrawLogMarker(playerId, drawnCard.type));
   }
 }
 

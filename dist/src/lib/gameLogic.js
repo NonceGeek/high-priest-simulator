@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.NUWA_DRAW_LOG_PREFIX = void 0;
 exports.createCard = createCard;
 exports.createPlayer = createPlayer;
 exports.createGameState = createGameState;
@@ -8,6 +9,7 @@ exports.canPlayCard = canPlayCard;
 exports.canDesperateStrike = canDesperateStrike;
 exports.getAvailableActions = getAvailableActions;
 exports.resolveRound = resolveRound;
+exports.formatNuwaDrawLogMarker = formatNuwaDrawLogMarker;
 exports.drawCardFromDiscard = drawCardFromDiscard;
 const uuid_1 = require("uuid");
 const INITIAL_POPULATION = 15;
@@ -53,6 +55,7 @@ function createGameState(roomId) {
             player2: null,
         },
         gameLog: ['Game created. Waiting for players...'],
+        nuwaDrawHistory: [],
     };
 }
 function getCardName(type) {
@@ -176,7 +179,15 @@ function applyAllEffects(state, pid1, effect1, raid1, pid2, effect2, raid2, log)
     p1.population = Math.max(0, p1.population);
     p2.population = Math.max(0, p2.population);
 }
+/** Marker prefix so the client can filter opponent card names in the console. */
+exports.NUWA_DRAW_LOG_PREFIX = '__NUWA_DRAW__';
+function formatNuwaDrawLogMarker(playerId, cardType) {
+    return `${exports.NUWA_DRAW_LOG_PREFIX}|${playerId}|${cardType}`;
+}
 function handleCardDraw(state, playerId, log) {
+    if (!state.nuwaDrawHistory) {
+        state.nuwaDrawHistory = [];
+    }
     const allDiscards = [...state.players.player1.discardPile, ...state.players.player2.discardPile];
     const eligibleCards = allDiscards.filter(c => c.type !== 'sacrificeNuwa');
     if (eligibleCards.length > 0) {
@@ -186,7 +197,14 @@ function handleCardDraw(state, playerId, log) {
         state.players[playerId].hand.push(drawnCard);
         state.players.player1.discardPile = state.players.player1.discardPile.filter(c => c.id !== drawnCard.id);
         state.players.player2.discardPile = state.players.player2.discardPile.filter(c => c.id !== drawnCard.id);
-        log.push(`${playerId} 抽取了 ${getCardName(drawnCard.type)}`);
+        state.nuwaDrawHistory.push({
+            round: state.currentRound,
+            playerId,
+            cardType: drawnCard.type,
+            cardId: drawnCard.id,
+        });
+        // Full draw info stays in nuwaDrawHistory / localStorage; log marker is filtered per viewer.
+        log.push(formatNuwaDrawLogMarker(playerId, drawnCard.type));
     }
 }
 function resolveAction(state, playerId, action, log) {

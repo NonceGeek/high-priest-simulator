@@ -17,7 +17,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    socket.on('createRoom', (callback: (roomId: string) => void) => {
+    socket.on('createRoom', (nickname: string, callback: (roomId: string) => void) => {
       const roomId = uuidv4().slice(0, 8);
       const gameState = createGameState(roomId);
       
@@ -32,13 +32,14 @@ export function setupSocketServer(httpServer: HTTPServer) {
       socket.data.playerId = 'player1';
       
       gameState.players.player1.socketId = socket.id;
+      gameState.players.player1.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
       gameState.gameLog.push(`Room ${roomId} created. Waiting for player 2...`);
       
       callback(roomId);
       console.log(`Room ${roomId} created by ${socket.id}`);
     });
 
-    socket.on('joinRoom', (roomId: string, callback: (success: boolean, error?: string) => void) => {
+    socket.on('joinRoom', (roomId: string, nickname: string, callback: (success: boolean, error?: string) => void) => {
       const room = rooms.get(roomId);
       
       if (!room) {
@@ -61,6 +62,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
       socket.data.playerId = 'player2';
       
       room.gameState.players.player2.socketId = socket.id;
+      room.gameState.players.player2.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
       room.gameState.status = 'playing';
       room.gameState.gameLog.push('Player 2 joined. Game started!');
       

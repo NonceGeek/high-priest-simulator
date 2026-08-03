@@ -1,5 +1,5 @@
 import { Card, CardType, GameState, Player, PlayerId } from './types';
-import { getCardName } from './gameLogic';
+import { getCardName, NUWA_DRAW_LOG_PREFIX } from './gameLogic';
 
 interface GameUIProps {
   gameState: GameState;
@@ -44,10 +44,19 @@ export function CardComponent({ card, onClick, disabled }: { card: Card; onClick
   );
 }
 
-export function PlayerInfo({ player, isCurrentPlayer, label }: { player: Player; isCurrentPlayer: boolean; label: string }) {
+export function playerRoleLabel(id: PlayerId): string {
+  return id === 'player1' ? 'Player1' : 'Player2';
+}
+
+export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurrentPlayer: boolean }) {
+  const displayName = player.nickname?.trim() || (isCurrentPlayer ? '你' : '对手');
+
   return (
     <div className={`p-4 rounded-lg ${isCurrentPlayer ? 'bg-blue-900' : 'bg-red-900'} text-white`}>
-      <div className="font-bold text-xl mb-2">{label}</div>
+      <div className="font-bold text-xl mb-2">
+        {displayName}{' '}
+        <span className="text-base font-normal opacity-80">({playerRoleLabel(player.id)})</span>
+      </div>
       <div className="space-y-1">
         <div>人口: <span className="font-bold text-2xl">{player.population}</span></div>
         <div>手牌: {player.hand.length}</div>
@@ -58,16 +67,40 @@ export function PlayerInfo({ player, isCurrentPlayer, label }: { player: Player;
   );
 }
 
-export function GameLog({ log }: { log: string[] }) {
+/** Show own Nuwa draw card; hide opponent's card name in the console. */
+export function formatLogEntryForViewer(entry: string, viewerId: PlayerId): string {
+  if (!entry.startsWith(NUWA_DRAW_LOG_PREFIX + '|')) {
+    return entry;
+  }
+
+  const parts = entry.split('|');
+  if (parts.length < 3) {
+    return entry;
+  }
+
+  const drawerId = parts[1] as PlayerId;
+  const cardType = parts[2] as CardType;
+
+  if (drawerId === viewerId) {
+    return `${drawerId} 抽取了 ${getCardName(cardType)}`;
+  }
+
+  return `${drawerId} 抽取了一张牌`;
+}
+
+export function GameLog({ log, viewerId }: { log: string[]; viewerId: PlayerId }) {
   return (
     <div className="bg-gray-800 text-white p-4 rounded-lg h-64 overflow-y-auto">
       <div className="font-bold mb-2">游戏日志</div>
       <div className="space-y-1 text-sm">
-        {log.map((entry, index) => (
-          <div key={index} className={entry.startsWith('---') ? 'font-bold text-yellow-400 mt-2' : ''}>
-            {entry}
-          </div>
-        ))}
+        {log.map((entry, index) => {
+          const display = formatLogEntryForViewer(entry, viewerId);
+          return (
+            <div key={index} className={display.startsWith('---') ? 'font-bold text-yellow-400 mt-2' : ''}>
+              {display}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -120,8 +153,8 @@ export function GameUI({ gameState, playerId, onActionSelect }: GameUIProps) {
         </div>
         
         <div className="grid grid-cols-2 gap-8 mb-8">
-          <PlayerInfo player={currentPlayer} isCurrentPlayer={true} label="你" />
-          <PlayerInfo player={opponent} isCurrentPlayer={false} label="对手" />
+          <PlayerInfo player={currentPlayer} isCurrentPlayer={true} />
+          <PlayerInfo player={opponent} isCurrentPlayer={false} />
         </div>
         
         {gameState.status === 'playing' && !hasSelectedAction && (
@@ -152,7 +185,7 @@ export function GameUI({ gameState, playerId, onActionSelect }: GameUIProps) {
           </div>
         )}
         
-        <GameLog log={gameState.gameLog} />
+        <GameLog log={gameState.gameLog} viewerId={playerId} />
       </div>
     </div>
   );

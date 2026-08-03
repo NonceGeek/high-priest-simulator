@@ -28,14 +28,18 @@ export function disconnectSocket(): void {
   }
 }
 
-export function createRoom(callback: (roomId: string) => void): void {
+export function createRoom(nickname: string, callback: (roomId: string) => void): void {
   const socket = connectSocket();
-  socket.emit('createRoom', callback);
+  socket.emit('createRoom', nickname, callback);
 }
 
-export function joinRoom(roomId: string, callback: (success: boolean, error?: string) => void): void {
+export function joinRoom(
+  roomId: string,
+  nickname: string,
+  callback: (success: boolean, error?: string) => void,
+): void {
   const socket = connectSocket();
-  socket.emit('joinRoom', roomId, callback);
+  socket.emit('joinRoom', roomId, nickname, callback);
 }
 
 export function selectAction(action: Action, callback: (success: boolean, error?: string) => void): void {
