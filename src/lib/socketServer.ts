@@ -1,7 +1,7 @@
 import { Server as SocketServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { GameState, Room, Action, PlayerId } from './types';
-import { createGameState, resolveRound, getAvailableActions } from './gameLogic';
+import { createGameState, resolveRound, getAvailableActions, canPlaySacrificeChiyou, canPlaySacrificeNuwa, getPlayerLogName } from './gameLogic';
 import { v4 as uuidv4 } from 'uuid';
 
 const rooms = new Map<string, Room>();
@@ -33,7 +33,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
       
       gameState.players.player1.socketId = socket.id;
       gameState.players.player1.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
-      gameState.gameLog.push(`Room ${roomId} created. Waiting for player 2...`);
+      gameState.gameLog.push(`${getPlayerLogName(gameState, 'player1')} 创建了房间 ${roomId}，等待对手加入...`);
       
       callback(roomId);
       console.log(`Room ${roomId} created by ${socket.id}`);
@@ -64,7 +64,9 @@ export function setupSocketServer(httpServer: HTTPServer) {
       room.gameState.players.player2.socketId = socket.id;
       room.gameState.players.player2.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
       room.gameState.status = 'playing';
-      room.gameState.gameLog.push('Player 2 joined. Game started!');
+      room.gameState.gameLog.push(
+        `${getPlayerLogName(room.gameState, 'player2')} 加入了游戏，对战开始！`,
+      );
       
       callback(true);
       
@@ -95,9 +97,17 @@ export function setupSocketServer(httpServer: HTTPServer) {
       const player = room.gameState.players[playerId];
       
       if (action.type === 'card') {
-        const canPlay = player.hand.some(c => c.id === action.cardId);
-        if (!canPlay) {
+        const card = player.hand.find(c => c.id === action.cardId);
+        if (!card) {
           callback(false, 'Card not in hand');
+          return;
+        }
+        if (card.type === 'sacrificeChiyou' && !canPlaySacrificeChiyou(player)) {
+          callback(false, '无法支付献祭所需的祭品');
+          return;
+        }
+        if (card.type === 'sacrificeNuwa' && !canPlaySacrificeNuwa(room.gameState)) {
+          callback(false, '弃牌堆可抽取的牌不足 3 张');
           return;
         }
       } else if (action.type === 'desperateStrike') {
@@ -112,7 +122,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
       }
       
       room.gameState.selectedActions[playerId] = action;
-      room.gameState.gameLog.push(`${playerId} has selected an action`);
+      room.gameState.gameLog.push(`${getPlayerLogName(room.gameState, playerId)} 已选择行动`);
       
       callback(true);
       
@@ -123,7 +133,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
       if (otherPlayer.socketId) {
         io.to(otherPlayer.socketId).emit('gameState', {
           ...room.gameState,
-          gameLog: [...room.gameState.gameLog, 'Opponent has selected an action'],
+          gameLog: [...room.gameState.gameLog, '对手已选择行动'],
         });
       }
       
@@ -160,7 +170,7 @@ export function setupSocketServer(httpServer: HTTPServer) {
         const room = rooms.get(roomId);
         if (room) {
           room.gameState.players[playerId].socketId = undefined;
-          room.gameState.gameLog.push(`${playerId} disconnected`);
+          room.gameState.gameLog.push(`${getPlayerLogName(room.gameState, playerId)} 已断开连接`);
           
           const otherPlayerId = playerId === 'player1' ? 'player2' : 'player1';
           const otherPlayer = room.gameState.players[otherPlayerId];

@@ -19,6 +19,8 @@ export interface Player {
   population: number;
   hand: Card[];
   discardPile: Card[];
+  /** Face-up discard names since last 向女娲祭祀; cleared when the ritual resolves. */
+  faceUpDiscards: CardType[];
   captives: Captive[];
   socketId?: string;
 }

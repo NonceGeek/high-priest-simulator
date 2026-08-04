@@ -1,5 +1,5 @@
 import { Card, CardType, GameState, Player, PlayerId } from './types';
-import { getCardName, NUWA_DRAW_LOG_PREFIX } from './gameLogic';
+import { getCardName, NUWA_DRAW_LOG_PREFIX, canPlaySacrificeChiyou, canPlaySacrificeNuwa, getPlayerLogName } from './gameLogic';
 
 interface GameUIProps {
   gameState: GameState;
@@ -12,7 +12,7 @@ export function getCardDescription(type: CardType): string {
     raid: '从敌方部落转移 1 人口至你的部落',
     nightRaid: '对敌方部落造成 3 点人口伤害',
     nightWatch: '抵消敌方夜袭或劫掠，若对方夜袭则造成 1 点伤害',
-    sacrificeChiyou: '牺牲 2 人口造成 4 伤害，或牺牲 2 俘虏造成 6 伤害',
+    sacrificeChiyou: '献祭 2 俘虏→6 伤，1 俘虏→4 伤，2 人口→4 伤（按优先级自动选择）',
     sacrificeNuwa: '从弃牌堆随机抽取 1 张牌（需至少 3 张牌）',
   };
   return descriptions[type];
@@ -50,6 +50,7 @@ export function playerRoleLabel(id: PlayerId): string {
 
 export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurrentPlayer: boolean }) {
   const displayName = player.nickname?.trim() || (isCurrentPlayer ? '你' : '对手');
+  const faceUpDiscards = player.faceUpDiscards ?? [];
 
   return (
     <div className={`p-4 rounded-lg ${isCurrentPlayer ? 'bg-blue-900' : 'bg-red-900'} text-white`}>
@@ -60,7 +61,12 @@ export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurr
       <div className="space-y-1">
         <div>人口: <span className="font-bold text-2xl">{player.population}</span></div>
         <div>手牌: {player.hand.length}</div>
-        <div>弃牌堆: {player.discardPile.length}</div>
+        <div>弃牌数量总计: {player.discardPile.length}</div>
+        {faceUpDiscards.length > 0 && (
+          <div>弃牌堆里的牌: &nbsp;
+            {faceUpDiscards.map((type) => getCardName(type)).join('、')}
+          </div>
+        )}
         <div>俘虏: {player.captives.length}</div>
       </div>
     </div>
@@ -68,7 +74,11 @@ export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurr
 }
 
 /** Show own Nuwa draw card; hide opponent's card name in the console. */
-export function formatLogEntryForViewer(entry: string, viewerId: PlayerId): string {
+export function formatLogEntryForViewer(
+  entry: string,
+  viewerId: PlayerId,
+  gameState: GameState,
+): string {
   if (!entry.startsWith(NUWA_DRAW_LOG_PREFIX + '|')) {
     return entry;
   }
@@ -80,21 +90,30 @@ export function formatLogEntryForViewer(entry: string, viewerId: PlayerId): stri
 
   const drawerId = parts[1] as PlayerId;
   const cardType = parts[2] as CardType;
+  const drawerName = getPlayerLogName(gameState, drawerId);
 
   if (drawerId === viewerId) {
-    return `${drawerId} 抽取了 ${getCardName(cardType)}`;
+    return `${drawerName} 抽取了 ${getCardName(cardType)}`;
   }
 
-  return `${drawerId} 抽取了一张牌`;
+  return `${drawerName} 抽取了一张牌`;
 }
 
-export function GameLog({ log, viewerId }: { log: string[]; viewerId: PlayerId }) {
+export function GameLog({
+  log,
+  viewerId,
+  gameState,
+}: {
+  log: string[];
+  viewerId: PlayerId;
+  gameState: GameState;
+}) {
   return (
     <div className="bg-gray-800 text-white p-4 rounded-lg h-64 overflow-y-auto">
       <div className="font-bold mb-2">游戏日志</div>
       <div className="space-y-1 text-sm">
         {log.map((entry, index) => {
-          const display = formatLogEntryForViewer(entry, viewerId);
+          const display = formatLogEntryForViewer(entry, viewerId, gameState);
           return (
             <div key={index} className={display.startsWith('---') ? 'font-bold text-yellow-400 mt-2' : ''}>
               {display}
@@ -165,6 +184,10 @@ export function GameUI({ gameState, playerId, onActionSelect }: GameUIProps) {
                 <CardComponent
                   key={card.id}
                   card={card}
+                  disabled={
+                    (card.type === 'sacrificeChiyou' && !canPlaySacrificeChiyou(currentPlayer)) ||
+                    (card.type === 'sacrificeNuwa' && !canPlaySacrificeNuwa(gameState))
+                  }
                   onClick={() => onActionSelect({ type: 'card', cardId: card.id })}
                 />
               ))}
@@ -185,7 +208,7 @@ export function GameUI({ gameState, playerId, onActionSelect }: GameUIProps) {
           </div>
         )}
         
-        <GameLog log={gameState.gameLog} viewerId={playerId} />
+        <GameLog log={gameState.gameLog} viewerId={playerId} gameState={gameState} />
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ function setupSocketServer(httpServer) {
             socket.data.playerId = 'player1';
             gameState.players.player1.socketId = socket.id;
             gameState.players.player1.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
-            gameState.gameLog.push(`Room ${roomId} created. Waiting for player 2...`);
+            gameState.gameLog.push(`${(0, gameLogic_1.getPlayerLogName)(gameState, 'player1')} 创建了房间 ${roomId}，等待对手加入...`);
             callback(roomId);
             console.log(`Room ${roomId} created by ${socket.id}`);
         });
@@ -53,7 +53,7 @@ function setupSocketServer(httpServer) {
             room.gameState.players.player2.socketId = socket.id;
             room.gameState.players.player2.nickname = (nickname || '').trim().slice(0, 16) || '祭司';
             room.gameState.status = 'playing';
-            room.gameState.gameLog.push('Player 2 joined. Game started!');
+            room.gameState.gameLog.push(`${(0, gameLogic_1.getPlayerLogName)(room.gameState, 'player2')} 加入了游戏，对战开始！`);
             callback(true);
             io.to(roomId).emit('gameState', room.gameState);
             console.log(`Player 2 joined room ${roomId}`);
@@ -76,9 +76,17 @@ function setupSocketServer(httpServer) {
             }
             const player = room.gameState.players[playerId];
             if (action.type === 'card') {
-                const canPlay = player.hand.some(c => c.id === action.cardId);
-                if (!canPlay) {
+                const card = player.hand.find(c => c.id === action.cardId);
+                if (!card) {
                     callback(false, 'Card not in hand');
+                    return;
+                }
+                if (card.type === 'sacrificeChiyou' && !(0, gameLogic_1.canPlaySacrificeChiyou)(player)) {
+                    callback(false, '无法支付献祭所需的祭品');
+                    return;
+                }
+                if (card.type === 'sacrificeNuwa' && !(0, gameLogic_1.canPlaySacrificeNuwa)(room.gameState)) {
+                    callback(false, '弃牌堆可抽取的牌不足 3 张');
                     return;
                 }
             }
@@ -93,7 +101,7 @@ function setupSocketServer(httpServer) {
                 }
             }
             room.gameState.selectedActions[playerId] = action;
-            room.gameState.gameLog.push(`${playerId} has selected an action`);
+            room.gameState.gameLog.push(`${(0, gameLogic_1.getPlayerLogName)(room.gameState, playerId)} 已选择行动`);
             callback(true);
             io.to(socket.id).emit('gameState', room.gameState);
             const otherPlayerId = playerId === 'player1' ? 'player2' : 'player1';
@@ -101,7 +109,7 @@ function setupSocketServer(httpServer) {
             if (otherPlayer.socketId) {
                 io.to(otherPlayer.socketId).emit('gameState', {
                     ...room.gameState,
-                    gameLog: [...room.gameState.gameLog, 'Opponent has selected an action'],
+                    gameLog: [...room.gameState.gameLog, '对手已选择行动'],
                 });
             }
             if (room.gameState.selectedActions.player1 && room.gameState.selectedActions.player2) {
@@ -131,7 +139,7 @@ function setupSocketServer(httpServer) {
                 const room = rooms.get(roomId);
                 if (room) {
                     room.gameState.players[playerId].socketId = undefined;
-                    room.gameState.gameLog.push(`${playerId} disconnected`);
+                    room.gameState.gameLog.push(`${(0, gameLogic_1.getPlayerLogName)(room.gameState, playerId)} 已断开连接`);
                     const otherPlayerId = playerId === 'player1' ? 'player2' : 'player1';
                     const otherPlayer = room.gameState.players[otherPlayerId];
                     if (otherPlayer.socketId) {

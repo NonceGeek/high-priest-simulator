@@ -5,6 +5,10 @@ exports.createCard = createCard;
 exports.createPlayer = createPlayer;
 exports.createGameState = createGameState;
 exports.getCardName = getCardName;
+exports.getPlayerRoleLabel = getPlayerRoleLabel;
+exports.getPlayerLogName = getPlayerLogName;
+exports.canPlaySacrificeChiyou = canPlaySacrificeChiyou;
+exports.canPlaySacrificeNuwa = canPlaySacrificeNuwa;
 exports.canPlayCard = canPlayCard;
 exports.canDesperateStrike = canDesperateStrike;
 exports.getAvailableActions = getAvailableActions;
@@ -37,6 +41,7 @@ function createPlayer(id) {
         population: INITIAL_POPULATION,
         hand,
         discardPile: [],
+        faceUpDiscards: [],
         captives: [],
     };
 }
@@ -54,7 +59,7 @@ function createGameState(roomId) {
             player1: null,
             player2: null,
         },
-        gameLog: ['Game created. Waiting for players...'],
+        gameLog: ['游戏已创建，等待玩家加入...'],
         nuwaDrawHistory: [],
     };
 }
@@ -68,15 +73,79 @@ function getCardName(type) {
     };
     return names[type];
 }
-function canPlayCard(player, cardId) {
-    return player.hand.some(card => card.id === cardId);
+function getPlayerRoleLabel(id) {
+    return id === 'player1' ? 'Player1' : 'Player2';
+}
+function getPlayerLogName(state, playerId) {
+    const nickname = state.players[playerId].nickname?.trim() || '祭司';
+    return `${nickname} (${getPlayerRoleLabel(playerId)})`;
+}
+function formatPlayerStatusLine(state, playerId) {
+    const player = state.players[playerId];
+    return `${getPlayerLogName(state, playerId)}: 人口 ${player.population} | 俘虏 ${player.captives.length}`;
+}
+/** Can play 向蚩尤献祭 if any sacrifice tier is affordable. */
+function canPlaySacrificeChiyou(player) {
+    if (player.captives.length >= 1)
+        return true;
+    return player.population >= 2;
+}
+/** Can play 向女娲祭祀 if both discard piles have ≥3 eligible cards (excluding 向女娲祭祀). */
+function canPlaySacrificeNuwa(state) {
+    const allDiscards = [...state.players.player1.discardPile, ...state.players.player2.discardPile];
+    return allDiscards.filter((c) => c.type !== 'sacrificeNuwa').length >= 3;
+}
+function canPlayCard(player, cardId, state) {
+    const card = player.hand.find((c) => c.id === cardId);
+    if (!card)
+        return false;
+    if (card.type === 'sacrificeChiyou') {
+        return canPlaySacrificeChiyou(player);
+    }
+    if (card.type === 'sacrificeNuwa') {
+        return canPlaySacrificeNuwa(state);
+    }
+    return true;
+}
+function resolveChiyouSacrifice(player) {
+    if (player.captives.length >= 2) {
+        return {
+            captivesLost: 2,
+            populationChange: 0,
+            opponentDamage: 6,
+            logMessage: '献俘大祭：献祭 2 名俘虏，造成 6 点伤害',
+        };
+    }
+    if (player.captives.length >= 1) {
+        return {
+            captivesLost: 1,
+            populationChange: 0,
+            opponentDamage: 4,
+            logMessage: '献俘血祭：献祭 1 名俘虏，造成 4 点伤害',
+        };
+    }
+    if (player.population >= 2) {
+        return {
+            captivesLost: 0,
+            populationChange: -2,
+            opponentDamage: 4,
+            logMessage: '血祭本族：牺牲 2 人口，造成 4 点伤害',
+        };
+    }
+    return null;
 }
 function canDesperateStrike(player) {
     return player.hand.length === 0 && player.population > 0;
 }
-function getAvailableActions(player) {
+function getAvailableActions(player, state) {
     const actions = [];
     player.hand.forEach(card => {
+        if (card.type === 'sacrificeChiyou' && !canPlaySacrificeChiyou(player)) {
+            return;
+        }
+        if (card.type === 'sacrificeNuwa' && !canPlaySacrificeNuwa(state)) {
+            return;
+        }
         actions.push({ type: 'card', cardId: card.id });
     });
     if (canDesperateStrike(player)) {
@@ -95,11 +164,9 @@ function resolveRound(state) {
     if (!action1 || !action2) {
         return newState;
     }
-    const p1 = newState.players.player1;
-    const p2 = newState.players.player2;
     const log = [
         `\n--- Round ${newState.currentRound} ---`,
-        `玩家1: 人口 ${p1.population} | 俘虏 ${p1.captives.length}    玩家2: 人口 ${p2.population} | 俘虏 ${p2.captives.length}`
+        `${formatPlayerStatusLine(newState, 'player1')}    ${formatPlayerStatusLine(newState, 'player2')}`,
     ];
     let effect1 = resolveAction(newState, 'player1', action1, log);
     let effect2 = resolveAction(newState, 'player2', action2, log);
@@ -108,9 +175,7 @@ function resolveRound(state) {
     const raid2 = resolveRaidIntent(newState, 'player2', effect2, log);
     applyAllEffects(newState, 'player1', effect1, raid1, 'player2', effect2, raid2, log);
     moveCardsToDiscard(newState, action1, action2);
-    const p1After = newState.players.player1;
-    const p2After = newState.players.player2;
-    log.push(`玩家1: 人口 ${p1After.population} | 俘虏 ${p1After.captives.length}    玩家2: 人口 ${p2After.population} | 俘虏 ${p2After.captives.length}`);
+    log.push(`${formatPlayerStatusLine(newState, 'player1')}    ${formatPlayerStatusLine(newState, 'player2')}`);
     checkWinCondition(newState, log);
     newState.gameLog.push(...log);
     newState.selectedActions = { player1: null, player2: null };
@@ -125,11 +190,11 @@ function resolveRaidIntent(state, playerId, effect, log) {
     const opponent = state.players[opponentId];
     const ownCaptivesHeldByOpponent = opponent.captives.filter(c => c.originalOwner === playerId);
     if (ownCaptivesHeldByOpponent.length > 0) {
-        log.push(`${playerId} 夺回 1 名族人`);
+        log.push(`${getPlayerLogName(state, playerId)} 夺回 1 名族人`);
         return { active: true, rescue: true };
     }
     else {
-        log.push(`${playerId} 掳掠 1 名人口`);
+        log.push(`${getPlayerLogName(state, playerId)} 掳掠 1 名人口`);
         return { active: true, rescue: false };
     }
 }
@@ -165,10 +230,10 @@ function applyAllEffects(state, pid1, effect1, raid1, pid2, effect2, raid2, log)
         p2.captives.push({ originalOwner: pid1, currentController: pid2 });
     }
     if (effect1.cancelled) {
-        log.push(`${pid1} 的行动被抵消`);
+        log.push(`${getPlayerLogName(state, pid1)} 的行动被抵消`);
     }
     if (effect2.cancelled) {
-        log.push(`${pid2} 的行动被抵消`);
+        log.push(`${getPlayerLogName(state, pid2)} 的行动被抵消`);
     }
     if (effect1.cardDrawn) {
         handleCardDraw(state, pid1, log);
@@ -184,10 +249,16 @@ exports.NUWA_DRAW_LOG_PREFIX = '__NUWA_DRAW__';
 function formatNuwaDrawLogMarker(playerId, cardType) {
     return `${exports.NUWA_DRAW_LOG_PREFIX}|${playerId}|${cardType}`;
 }
+function clearFaceUpDiscards(state) {
+    state.players.player1.faceUpDiscards = [];
+    state.players.player2.faceUpDiscards = [];
+}
 function handleCardDraw(state, playerId, log) {
     if (!state.nuwaDrawHistory) {
         state.nuwaDrawHistory = [];
     }
+    // Mixing the pool for 向女娲祭祀 — clear revealed discard names.
+    clearFaceUpDiscards(state);
     const allDiscards = [...state.players.player1.discardPile, ...state.players.player2.discardPile];
     const eligibleCards = allDiscards.filter(c => c.type !== 'sacrificeNuwa');
     if (eligibleCards.length > 0) {
@@ -220,13 +291,13 @@ function resolveAction(state, playerId, action, log) {
         cardDrawn: false,
     };
     if (action.type === 'desperateStrike') {
-        log.push(`${playerId} 发动垂死一搏，投入 ${action.populationCost} 人口`);
+        log.push(`${getPlayerLogName(state, playerId)} 发动垂死一搏，投入 ${action.populationCost} 人口`);
         effect.populationChange = -action.populationCost;
         effect.opponentDamage = action.populationCost;
         return effect;
     }
     const card = player.hand.find(c => c.id === action.cardId);
-    log.push(`${playerId} 打出 ${getCardName(card.type)}`);
+    log.push(`${getPlayerLogName(state, playerId)} 打出 ${getCardName(card.type)}`);
     switch (card.type) {
         case 'nightRaid':
             effect.opponentDamage = 3;
@@ -237,24 +308,27 @@ function resolveAction(state, playerId, action, log) {
         case 'raid':
             effect.captivesGained = 1;
             break;
-        case 'sacrificeChiyou':
-            const captivesAvailable = player.captives.length;
-            if (captivesAvailable >= 2) {
-                effect.captivesLost = 2;
-                effect.opponentDamage = 6;
-                log.push(`${playerId} 献祭 2 名俘虏，造成 6 点伤害`);
+        case 'sacrificeChiyou': {
+            const sacrifice = resolveChiyouSacrifice(player);
+            if (!sacrifice) {
+                effect.cancelled = true;
+                log.push(`${getPlayerLogName(state, playerId)} 无法支付献祭所需的祭品`);
+                break;
+            }
+            effect.captivesLost = sacrifice.captivesLost;
+            effect.populationChange = sacrifice.populationChange;
+            effect.opponentDamage = sacrifice.opponentDamage;
+            log.push(`${getPlayerLogName(state, playerId)} ${sacrifice.logMessage}`);
+            break;
+        }
+        case 'sacrificeNuwa':
+            if (canPlaySacrificeNuwa(state)) {
+                effect.cardDrawn = true;
+                log.push(`${getPlayerLogName(state, playerId)} 从弃牌堆抽取 1 张牌`);
             }
             else {
-                effect.populationChange = -2;
-                effect.opponentDamage = 4;
-                log.push(`${playerId} 血祭本族 2 人口，造成 4 点伤害`);
-            }
-            break;
-        case 'sacrificeNuwa':
-            const totalDiscard = state.players.player1.discardPile.length + state.players.player2.discardPile.length;
-            if (totalDiscard >= 3) {
-                effect.cardDrawn = true;
-                log.push(`${playerId} 从弃牌堆抽取 1 张牌`);
+                effect.cancelled = true;
+                log.push(`${getPlayerLogName(state, playerId)} 弃牌堆可抽取的牌不足，祭祀无效`);
             }
             break;
     }
@@ -296,6 +370,10 @@ function moveCardsToDiscard(state, action1, action2) {
         if (card) {
             state.players.player1.hand = state.players.player1.hand.filter(c => c.id !== action1.cardId);
             state.players.player1.discardPile.push(card);
+            if (!state.players.player1.faceUpDiscards) {
+                state.players.player1.faceUpDiscards = [];
+            }
+            state.players.player1.faceUpDiscards.push(card.type);
         }
     }
     if (action2.type === 'card') {
@@ -303,6 +381,10 @@ function moveCardsToDiscard(state, action1, action2) {
         if (card) {
             state.players.player2.hand = state.players.player2.hand.filter(c => c.id !== action2.cardId);
             state.players.player2.discardPile.push(card);
+            if (!state.players.player2.faceUpDiscards) {
+                state.players.player2.faceUpDiscards = [];
+            }
+            state.players.player2.faceUpDiscards.push(card.type);
         }
     }
 }
@@ -317,12 +399,12 @@ function checkWinCondition(state, log) {
     else if (p1Dead) {
         state.status = 'finished';
         state.winner = 'player2';
-        log.push('\n=== 游戏结束：玩家 2 获胜！ ===');
+        log.push(`\n=== 游戏结束：${getPlayerLogName(state, 'player2')} 获胜！ ===`);
     }
     else if (p2Dead) {
         state.status = 'finished';
         state.winner = 'player1';
-        log.push('\n=== 游戏结束：玩家 1 获胜！ ===');
+        log.push(`\n=== 游戏结束：${getPlayerLogName(state, 'player1')} 获胜！ ===`);
     }
 }
 function drawCardFromDiscard(state, playerId) {
