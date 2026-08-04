@@ -9,6 +9,7 @@ import {
   setStoredNickname,
   MAX_NICKNAME_LENGTH,
 } from '@/lib/nickname';
+import { resolveRandomSlogan } from '@/lib/slogan';
 
 export default function Home() {
   const router = useRouter();
@@ -22,12 +23,16 @@ export default function Home() {
   const [hasSavedNickname, setHasSavedNickname] = useState(false);
   const [editingNickname, setEditingNickname] = useState(false);
   const [draftNickname, setDraftNickname] = useState('');
+  const [slogan, setSlogan] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     void (async () => {
-      const { nickname: name, isStored } = await resolveInitialNickname();
+      const [{ nickname: name, isStored }, tagline] = await Promise.all([
+        resolveInitialNickname(),
+        resolveRandomSlogan(),
+      ]);
       if (cancelled) return;
 
       setNickname(name);
@@ -35,6 +40,7 @@ export default function Home() {
       setHasSavedNickname(isStored);
       setEditingNickname(!isStored);
       setNicknameReady(true);
+      setSlogan(tagline);
     })();
 
     const savedRoomId = localStorage.getItem('roomId');
@@ -216,6 +222,11 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-700 flex items-center justify-center">
       <div className="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-md w-full">
         <h1 className="text-4xl font-bold text-white text-center mb-8">大祭司模拟器</h1>
+        {slogan && (
+          <div className="text-gray-300 text-center mb-8 italic">
+            —— {slogan}
+          </div>
+        )}
 
         {nicknameField}
 
