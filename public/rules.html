@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>大祭司模拟器 · 桌游规则</title>
+  <style>
+    :root {
+      --bg: #1f2937;
+      --bg-deep: #111827;
+      --surface: #374151;
+      --text: #f3f4f6;
+      --muted: #d1d5db;
+      --accent: #fbbf24;
+      --link: #60a5fa;
+      --border: #4b5563;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Songti SC", "Noto Serif SC", "Source Han Serif SC",
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+      background: linear-gradient(to bottom, var(--bg-deep), #374151);
+      color: var(--text);
+      line-height: 1.75;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+
+    .nav {
+      margin-bottom: 2rem;
+    }
+
+    .nav a {
+      color: var(--link);
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+
+    .nav a:hover { text-decoration: underline; }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-style: italic;
+      margin: 0 0 2rem;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin: 2.5rem 0 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--accent);
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin: 1.75rem 0 0.75rem;
+    }
+
+    h4 {
+      font-size: 1.05rem;
+      margin: 1.5rem 0 0.5rem;
+      color: #fde68a;
+    }
+
+    p { margin: 0.75rem 0; color: var(--muted); }
+
+    ul, ol {
+      margin: 0.5rem 0 1rem;
+      padding-left: 1.4rem;
+      color: var(--muted);
+    }
+
+    li { margin: 0.35rem 0; }
+
+    strong { color: var(--text); font-weight: 600; }
+
+    .card {
+      background: rgba(31, 41, 55, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.25rem 1.35rem;
+      margin: 1rem 0 1.5rem;
+    }
+
+    .card .label {
+      display: inline-block;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 0.35rem;
+    }
+
+    .flavor {
+      color: #9ca3af;
+      font-style: italic;
+      margin-top: 0.85rem;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      color: #9ca3af;
+      font-size: 0.875rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a href="/">← 返回大厅</a>
+    </nav>
+
+    <h1>大祭司模拟器 v1.3</h1>
+    <p class="subtitle">18 牌基础版、16 牌基础版、9 牌版。</p>
+
+    <h2>16 牌基础版</h2>
+    <ul>
+      <li>双方各自拥有完全相同的 8 张卡牌：
+        <ul>
+          <li>「劫掠」× 2</li>
+          <li>「夜袭」× 2</li>
+          <li>「守夜」× 2</li>
+          <li>「向蚩尤献祭」× 1</li>
+          <li>「向女娲祭祀」× 1</li>
+        </ul>
+      </li>
+      <li>每个部落初始拥有 15 人口。</li>
+      <li>双方同时秘密选择本轮行动：有手牌时打出 1 张卡牌；没有手牌时发动「垂死一搏」。使用后的牌进入各自的弃牌堆。</li>
+      <li>双方同时公开并结算本轮行动。当任一部落人口降至 0 或以下时，该部落被击败。</li>
+    </ul>
+
+    <h3>1 人口</h3>
+    <p>每位玩家拥有一个独立且公开的部落人口数。</p>
+    <p>游戏开始时，每个部落拥有 <strong>15 人口</strong>。玩家使用人口标记、计数器或纸笔记录当前人口。</p>
+    <p>卡牌造成「人口伤害」时，受影响的部落减少相应人口；卡牌要求“牺牲人口”时，使用者必须先拥有足够的人口，才能发动该效果。</p>
+    <p>通过「劫掠」获得的人口加入控制者的部落人口，同时保留“敌方俘虏”的身份。俘虏可以作为普通人口承受损失，也可以用于需要敌方俘虏的献祭。</p>
+    <p>每名俘虏保留其原所属部落的信息。如果原所属部落通过「劫掠」将其夺回，该人口返回原所属部落，并恢复为普通人口，不再视为俘虏。</p>
+    <p>当部落失去人口时，由该部落的玩家决定优先失去普通人口还是俘虏，除非卡牌另有说明。</p>
+    <p>人口不能低于 0。当任一部落的人口降至 0 时，该部落立即被击败，对方玩家获胜。</p>
+    <p>如果双方部落的人口在同一次结算中同时降至 0，则本局为平局。</p>
+
+    <h3>2 垂死一搏</h3>
+    <p>当玩家在选择行动时没有任何手牌，必须发动「垂死一搏」。</p>
+    <p>发动时，秘密选择投入 <strong>1～3 人口</strong>，且投入数量不能超过己方当前人口。双方选择完行动后，同时公开。</p>
+    <p>结算时，己方部落失去所投入的人口，并对敌方部落造成等量的人口伤害。</p>
+    <p>「垂死一搏」不视为卡牌，不会进入弃牌堆，也不能被「守夜」抵消。它与对方本轮打出的卡牌或发动的「垂死一搏」同时结算。</p>
+    <p>如果结算后双方人口同时降至 0，则本局为平局；只有一方人口降至 0 时，该方被击败。</p>
+
+    <h3>3 弃牌堆</h3>
+    <p>每位玩家拥有一个独立且公开的弃牌堆。</p>
+    <p>卡牌使用后，进入其拥有者的弃牌堆。</p>
+    <p>玩家通过「向女娲祭祀」获得对方的卡牌时，只获得该牌的临时控制权。该牌使用后，仍进入其原拥有者的弃牌堆。</p>
+    <p>发动「向女娲祭祀」时，将双方弃牌堆中所有可抽取的牌临时混合，随机抽取一张。抽取完成后，其余卡牌放回各自拥有者的弃牌堆。</p>
+
+    <h3>4 卡牌设计</h3>
+
+    <div class="card">
+      <h4>4.1 夜袭</h4>
+      <div class="label">效果</div>
+      <p>如果本轮对方的卡牌不是「守夜」，对敌方部落造成 3 点人口伤害。</p>
+      <div class="label">描述</div>
+      <p class="flavor">月黑风高，烽火未燃。<br />当敌方听见马蹄声时，长矛已然沾血。</p>
+    </div>
+
+    <div class="card">
+      <h4>4.2 守夜</h4>
+      <div class="label">效果</div>
+      <p>如果本轮对方打出「夜袭」或「劫掠」，使其效果无效。</p>
+      <p>如果对方打出的是「夜袭」，再对敌方部落造成 1 点人口伤害。</p>
+      <div class="label">描述</div>
+      <p class="flavor">长夜无声，火把未熄。<br />龟甲上的纹路告诉你，今夜不同寻常。<br />于是你安排守夜人握紧兵刃，只等黑暗中的脚步靠近。</p>
+    </div>
+
+    <div class="card">
+      <h4>4.3 劫掠</h4>
+      <div class="label">效果</div>
+      <p>从敌方部落转移 1 人口至你的部落，并按照以下优先顺序结算：</p>
+      <ol>
+        <li><strong>优先夺回族人：</strong> 如果敌方部落控制着至少 1 名原属于你的俘虏，必须夺回其中 1 名。该人口返回你的部落，并恢复为普通人口，不再视为俘虏。</li>
+        <li><strong>否则掳掠人口：</strong> 如果敌方部落没有控制任何原属于你的俘虏，则从敌方部落掳掠 1 名普通人口。该人口转移至你的部落，并视为由你控制的敌方俘虏。</li>
+      </ol>
+      <p>如果对方打出「守夜」，此次「劫掠」无效。</p>
+      <p>如果双方本轮同时打出「劫掠」，均以本轮行动公开前的部落状态判断应当「夺回族人」还是「掳掠人口」，然后同时完成转移。本轮结算中新产生或被夺回的俘虏，不会改变另一方本轮「劫掠」的效果。</p>
+      <div class="label">描述</div>
+      <p class="flavor">火光越过林间，哭喊淹没部落。<br />有人掳走敌族，也有人趁乱救回失散的族人。</p>
+    </div>
+
+    <div class="card">
+      <h4>4.4 向女娲祭祀</h4>
+      <div class="label">效果</div>
+      <p>此祭祀无需牺牲人口。</p>
+      <p>在双方弃牌堆中合计至少有 3 张可抽取的牌的情况下，将双方用过的牌混合，从中随机抽取 1 张，加入你的手牌。</p>
+      <p>如果抽到「向女娲祭祀」，应重新抽取。</p>
+      <div class="label">描述</div>
+      <p class="flavor">无需血肉，只奉泥土与清水。<br />女娲拾起破碎的旧物，重新赋予它形体与生机。</p>
+    </div>
+
+    <div class="card">
+      <h4>4.5 向蚩尤献祭</h4>
+      <div class="label">效果</div>
+      <p>发动时，根据你控制的敌方俘虏数量，必须按照以下优先顺序选择效果：</p>
+      <ol>
+        <li><strong>血染高台：</strong> 如果你控制至少 2 名敌方俘虏，牺牲其中 2 名，对敌方部落造成 6 点人口伤害。</li>
+        <li><strong>献俘血祭：</strong> 否则，如果你控制 1 名敌方俘虏，牺牲该俘虏，对敌方部落造成 4 点人口伤害。</li>
+        <li><strong>血祭本族：</strong> 否则，牺牲己方部落 2 名普通人口，对敌方部落造成 4 点人口伤害。</li>
+      </ol>
+      <p>如果无法支付对应效果要求的祭品，则不能打出此牌。</p>
+      <div class="label">同轮结算</div>
+      <p>「向蚩尤献祭」以本轮行动公开时控制的俘虏数量决定发动效果，并立即牺牲相应祭品。已经被献祭的俘虏不能在同一轮中被「劫掠」夺回。</p>
+      <div class="label">描述</div>
+      <p class="flavor">战鼓震地，血染祭台。<br />蚩尤不问祭品来自何方，只问战争是否足够惨烈。</p>
+    </div>
+
+    <footer>
+      大祭司模拟器 · 桌游规则书
+    </footer>
+  </div>
+</body>
+</html>

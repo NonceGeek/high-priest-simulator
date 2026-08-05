@@ -246,6 +246,14 @@ export default function Home() {
             >
               加入房间
             </button>
+            <a
+              href="/rules.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center bg-gray-700 hover:bg-gray-600 text-gray-200 py-3 rounded-lg font-bold text-lg"
+            >
+              规则书 📖 
+            </a>
           </div>
         )}
 
