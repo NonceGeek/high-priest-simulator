@@ -14,6 +14,7 @@
       --accent: #fbbf24;
       --link: #60a5fa;
       --border: #4b5563;
+      --card-width: 168px;
     }
 
     * { box-sizing: border-box; }
@@ -35,9 +36,7 @@
       padding: 2.5rem 1.25rem 4rem;
     }
 
-    .nav {
-      margin-bottom: 2rem;
-    }
+    .nav { margin-bottom: 2rem; }
 
     .nav a {
       color: var(--link);
@@ -75,7 +74,7 @@
 
     h4 {
       font-size: 1.05rem;
-      margin: 1.5rem 0 0.5rem;
+      margin: 0 0 0.75rem;
       color: #fde68a;
     }
 
@@ -91,7 +90,42 @@
 
     strong { color: var(--text); font-weight: 600; }
 
-    .card {
+    .deck-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin: 1.25rem 0 1.75rem;
+      padding: 1rem;
+      background: rgba(31, 41, 55, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+
+    .deck-preview figure {
+      margin: 0;
+      text-align: center;
+    }
+
+    .deck-preview img {
+      width: 72px;
+      height: auto;
+      aspect-ratio: 2 / 3;
+      object-fit: contain;
+      border-radius: 0.35rem;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    .deck-preview figcaption {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      margin-top: 0.35rem;
+      max-width: 72px;
+      line-height: 1.3;
+    }
+
+    .rule-card {
       background: rgba(31, 41, 55, 0.85);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
@@ -99,7 +133,34 @@
       margin: 1rem 0 1.5rem;
     }
 
-    .card .label {
+    .rule-card-inner {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+    }
+
+    .rule-card-art {
+      flex-shrink: 0;
+      width: var(--card-width);
+    }
+
+    .rule-card-art img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 2 / 3;
+      object-fit: contain;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      display: block;
+      background: #111827;
+    }
+
+    .rule-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .label {
       display: inline-block;
       font-size: 0.75rem;
       text-transform: uppercase;
@@ -121,6 +182,17 @@
       color: #9ca3af;
       font-size: 0.875rem;
       text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      :root { --card-width: 120px; }
+
+      .rule-card-inner {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .rule-card-body { width: 100%; }
     }
   </style>
 </head>
@@ -149,6 +221,29 @@
       <li>双方同时公开并结算本轮行动。当任一部落人口降至 0 或以下时，该部落被击败。</li>
     </ul>
 
+    <div class="deck-preview" aria-label="卡牌一览">
+      <figure>
+        <img src="/cards/jl.png" alt="劫掠" width="72" height="108" />
+        <figcaption>劫掠 ×2</figcaption>
+      </figure>
+      <figure>
+        <img src="/cards/yx.png" alt="夜袭" width="72" height="108" />
+        <figcaption>夜袭 ×2</figcaption>
+      </figure>
+      <figure>
+        <img src="/cards/sy.png" alt="守夜" width="72" height="108" />
+        <figcaption>守夜 ×2</figcaption>
+      </figure>
+      <figure>
+        <img src="/cards/xsyxj.png" alt="向蚩尤献祭" width="72" height="108" />
+        <figcaption>向蚩尤献祭</figcaption>
+      </figure>
+      <figure>
+        <img src="/cards/xnwjs.png" alt="向女娲祭祀" width="72" height="108" />
+        <figcaption>向女娲祭祀</figcaption>
+      </figure>
+    </div>
+
     <h3>1 人口</h3>
     <p>每位玩家拥有一个独立且公开的部落人口数。</p>
     <p>游戏开始时，每个部落拥有 <strong>15 人口</strong>。玩家使用人口标记、计数器或纸笔记录当前人口。</p>
@@ -174,61 +269,96 @@
 
     <h3>4 卡牌设计</h3>
 
-    <div class="card">
-      <h4>4.1 夜袭</h4>
-      <div class="label">效果</div>
-      <p>如果本轮对方的卡牌不是「守夜」，对敌方部落造成 3 点人口伤害。</p>
-      <div class="label">描述</div>
-      <p class="flavor">月黑风高，烽火未燃。<br />当敌方听见马蹄声时，长矛已然沾血。</p>
+    <div class="rule-card">
+      <div class="rule-card-inner">
+        <div class="rule-card-art">
+          <img src="/cards/yx.png" alt="夜袭" width="168" height="252" />
+        </div>
+        <div class="rule-card-body">
+          <h4>4.1 夜袭</h4>
+          <div class="label">效果</div>
+          <p>如果本轮对方的卡牌不是「守夜」，对敌方部落造成 3 点人口伤害。</p>
+          <div class="label">描述</div>
+          <p class="flavor">月黑风高，烽火未燃。<br />当敌方听见马蹄声时，长矛已然沾血。</p>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h4>4.2 守夜</h4>
-      <div class="label">效果</div>
-      <p>如果本轮对方打出「夜袭」或「劫掠」，使其效果无效。</p>
-      <p>如果对方打出的是「夜袭」，再对敌方部落造成 1 点人口伤害。</p>
-      <div class="label">描述</div>
-      <p class="flavor">长夜无声，火把未熄。<br />龟甲上的纹路告诉你，今夜不同寻常。<br />于是你安排守夜人握紧兵刃，只等黑暗中的脚步靠近。</p>
+    <div class="rule-card">
+      <div class="rule-card-inner">
+        <div class="rule-card-art">
+          <img src="/cards/sy.png" alt="守夜" width="168" height="252" />
+        </div>
+        <div class="rule-card-body">
+          <h4>4.2 守夜</h4>
+          <div class="label">效果</div>
+          <p>如果本轮对方打出「夜袭」或「劫掠」，使其效果无效。</p>
+          <p>如果对方打出的是「夜袭」，再对敌方部落造成 1 点人口伤害。</p>
+          <div class="label">描述</div>
+          <p class="flavor">长夜无声，火把未熄。<br />龟甲上的纹路告诉你，今夜不同寻常。<br />于是你安排守夜人握紧兵刃，只等黑暗中的脚步靠近。</p>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h4>4.3 劫掠</h4>
-      <div class="label">效果</div>
-      <p>从敌方部落转移 1 人口至你的部落，并按照以下优先顺序结算：</p>
-      <ol>
-        <li><strong>优先夺回族人：</strong> 如果敌方部落控制着至少 1 名原属于你的俘虏，必须夺回其中 1 名。该人口返回你的部落，并恢复为普通人口，不再视为俘虏。</li>
-        <li><strong>否则掳掠人口：</strong> 如果敌方部落没有控制任何原属于你的俘虏，则从敌方部落掳掠 1 名普通人口。该人口转移至你的部落，并视为由你控制的敌方俘虏。</li>
-      </ol>
-      <p>如果对方打出「守夜」，此次「劫掠」无效。</p>
-      <p>如果双方本轮同时打出「劫掠」，均以本轮行动公开前的部落状态判断应当「夺回族人」还是「掳掠人口」，然后同时完成转移。本轮结算中新产生或被夺回的俘虏，不会改变另一方本轮「劫掠」的效果。</p>
-      <div class="label">描述</div>
-      <p class="flavor">火光越过林间，哭喊淹没部落。<br />有人掳走敌族，也有人趁乱救回失散的族人。</p>
+    <div class="rule-card">
+      <div class="rule-card-inner">
+        <div class="rule-card-art">
+          <img src="/cards/jl.png" alt="劫掠" width="168" height="252" />
+        </div>
+        <div class="rule-card-body">
+          <h4>4.3 劫掠</h4>
+          <div class="label">效果</div>
+          <p>从敌方部落转移 1 人口至你的部落，并按照以下优先顺序结算：</p>
+          <ol>
+            <li><strong>优先夺回族人：</strong> 如果敌方部落控制着至少 1 名原属于你的俘虏，必须夺回其中 1 名。该人口返回你的部落，并恢复为普通人口，不再视为俘虏。</li>
+            <li><strong>否则掳掠人口：</strong> 如果敌方部落没有控制任何原属于你的俘虏，则从敌方部落掳掠 1 名普通人口。该人口转移至你的部落，并视为由你控制的敌方俘虏。</li>
+          </ol>
+          <p>如果对方打出「守夜」，此次「劫掠」无效。</p>
+          <p>如果双方本轮同时打出「劫掠」，均以本轮行动公开前的部落状态判断应当「夺回族人」还是「掳掠人口」，然后同时完成转移。本轮结算中新产生或被夺回的俘虏，不会改变另一方本轮「劫掠」的效果。</p>
+          <div class="label">描述</div>
+          <p class="flavor">火光越过林间，哭喊淹没部落。<br />有人掳走敌族，也有人趁乱救回失散的族人。</p>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h4>4.4 向女娲祭祀</h4>
-      <div class="label">效果</div>
-      <p>此祭祀无需牺牲人口。</p>
-      <p>在双方弃牌堆中合计至少有 3 张可抽取的牌的情况下，将双方用过的牌混合，从中随机抽取 1 张，加入你的手牌。</p>
-      <p>如果抽到「向女娲祭祀」，应重新抽取。</p>
-      <div class="label">描述</div>
-      <p class="flavor">无需血肉，只奉泥土与清水。<br />女娲拾起破碎的旧物，重新赋予它形体与生机。</p>
+    <div class="rule-card">
+      <div class="rule-card-inner">
+        <div class="rule-card-art">
+          <img src="/cards/xnwjs.png" alt="向女娲祭祀" width="168" height="252" />
+        </div>
+        <div class="rule-card-body">
+          <h4>4.4 向女娲祭祀</h4>
+          <div class="label">效果</div>
+          <p>此祭祀无需牺牲人口。</p>
+          <p>在双方弃牌堆中合计至少有 3 张可抽取的牌的情况下，将双方用过的牌混合，从中随机抽取 1 张，加入你的手牌。</p>
+          <p>如果抽到「向女娲祭祀」，应重新抽取。</p>
+          <div class="label">描述</div>
+          <p class="flavor">无需血肉，只奉泥土与清水。<br />女娲拾起破碎的旧物，重新赋予它形体与生机。</p>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <h4>4.5 向蚩尤献祭</h4>
-      <div class="label">效果</div>
-      <p>发动时，根据你控制的敌方俘虏数量，必须按照以下优先顺序选择效果：</p>
-      <ol>
-        <li><strong>血染高台：</strong> 如果你控制至少 2 名敌方俘虏，牺牲其中 2 名，对敌方部落造成 6 点人口伤害。</li>
-        <li><strong>献俘血祭：</strong> 否则，如果你控制 1 名敌方俘虏，牺牲该俘虏，对敌方部落造成 4 点人口伤害。</li>
-        <li><strong>血祭本族：</strong> 否则，牺牲己方部落 2 名普通人口，对敌方部落造成 4 点人口伤害。</li>
-      </ol>
-      <p>如果无法支付对应效果要求的祭品，则不能打出此牌。</p>
-      <div class="label">同轮结算</div>
-      <p>「向蚩尤献祭」以本轮行动公开时控制的俘虏数量决定发动效果，并立即牺牲相应祭品。已经被献祭的俘虏不能在同一轮中被「劫掠」夺回。</p>
-      <div class="label">描述</div>
-      <p class="flavor">战鼓震地，血染祭台。<br />蚩尤不问祭品来自何方，只问战争是否足够惨烈。</p>
+    <div class="rule-card">
+      <div class="rule-card-inner">
+        <div class="rule-card-art">
+          <img src="/cards/xsyxj.png" alt="向蚩尤献祭" width="168" height="252" />
+        </div>
+        <div class="rule-card-body">
+          <h4>4.5 向蚩尤献祭</h4>
+          <div class="label">效果</div>
+          <p>发动时，根据你控制的敌方俘虏数量，必须按照以下优先顺序选择效果：</p>
+          <ol>
+            <li><strong>血染高台：</strong> 如果你控制至少 2 名敌方俘虏，牺牲其中 2 名，对敌方部落造成 6 点人口伤害。</li>
+            <li><strong>献俘血祭：</strong> 否则，如果你控制 1 名敌方俘虏，牺牲该俘虏，对敌方部落造成 4 点人口伤害。</li>
+            <li><strong>血祭本族：</strong> 否则，牺牲己方部落 2 名普通人口，对敌方部落造成 4 点人口伤害。</li>
+          </ol>
+          <p>如果无法支付对应效果要求的祭品，则不能打出此牌。</p>
+          <div class="label">同轮结算</div>
+          <p>「向蚩尤献祭」以本轮行动公开时控制的俘虏数量决定发动效果，并立即牺牲相应祭品。已经被献祭的俘虏不能在同一轮中被「劫掠」夺回。</p>
+          <div class="label">描述</div>
+          <p class="flavor">战鼓震地，血染祭台。<br />蚩尤不问祭品来自何方，只问战争是否足够惨烈。</p>
+        </div>
+      </div>
     </div>
 
     <footer>
