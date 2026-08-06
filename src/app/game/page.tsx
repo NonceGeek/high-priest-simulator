@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSocket, onGameState, offGameState, selectAction } from '@/lib/socketClient';
 import { GameState, PlayerId, Action } from '@/lib/types';
 import { GameUI, formatLogEntryForViewer } from '@/lib/gameUI';
+import { getTotalPopulation } from '@/lib/gameLogic';
 
 function normalizeGameState(state: GameState): GameState {
   return {
@@ -162,20 +163,47 @@ export default function GamePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-gray-800 text-white rounded-lg shadow-2xl p-8 max-w-md w-full text-center">
             <h2 className="text-2xl font-bold mb-2">游戏结束</h2>
-            {gameState.endReason === 'population' ? (
-              <div className="text-gray-300 mb-6 space-y-3">
-                <p>双方部落都耗尽了手上的资源，进入了最惨烈的肉搏战……</p>
-                <p className="text-yellow-300 font-semibold">
-                  {gameState.winner === 'draw'
-                    ? '最终无人获胜。'
-                    : `${
-                        gameState.players[gameState.winner!].nickname?.trim() || '祭司'
-                      }的部落获得了最终胜利。`}
-                </p>
-              </div>
-            ) : (
-              <p className="text-gray-300 mb-6">选择下一步操作</p>
-            )}
+            {(() => {
+              const bothHaveHands =
+                gameState.players.player1.hand.length > 0 &&
+                gameState.players.player2.hand.length > 0;
+
+              if (gameState.endReason === 'population') {
+                return (
+                  <div className="text-gray-300 mb-6 space-y-3">
+                    <p>双方部落都耗尽了手上的资源，进入了最惨烈的肉搏战……</p>
+                    <p className="text-sm text-gray-400">
+                      总人口 {getTotalPopulation(gameState.players.player1)} vs{' '}
+                      {getTotalPopulation(gameState.players.player2)}
+                    </p>
+                    <p className="text-yellow-300 font-semibold">
+                      {gameState.winner === 'draw'
+                        ? '最终无人获胜。'
+                        : `${
+                            gameState.players[gameState.winner!].nickname?.trim() || '祭司'
+                          }的部落获得了最终胜利。`}
+                    </p>
+                  </div>
+                );
+              }
+
+              // Both still hold cards, but tribes were wiped out (e.g. mutual 献祭).
+              if (
+                gameState.endReason === 'knockout' &&
+                bothHaveHands &&
+                getTotalPopulation(gameState.players.player1) <= 0 &&
+                getTotalPopulation(gameState.players.player2) <= 0
+              ) {
+                return (
+                  <div className="text-gray-300 mb-6 space-y-3">
+                    <p>双方部众皆已阵亡，只有两位祭司在战场上默默地看着对方……</p>
+                    <p className="text-yellow-300 font-semibold">最终无人获胜。</p>
+                  </div>
+                );
+              }
+
+              return <p className="text-gray-300 mb-6">选择下一步操作</p>;
+            })()}
             <div className="space-y-3">
               <button
                 type="button"

@@ -77,7 +77,10 @@ export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurr
         <span className="text-base font-normal opacity-80">({playerRoleLabel(player.id)})</span>
       </div>
       <div className="space-y-1">
-        <div>人口: <span className="font-bold text-2xl">{player.population}</span></div>
+        <div>
+          总人口（本部落人口+俘虏人口）: {player.population} + {player.captives.length}
+        </div>
+        <div>俘虏人口：{player.captives.length}</div>
         <div>手牌: {player.hand.length}</div>
         <div>弃牌数量总计: {player.discardPile.length}</div>
         {faceUpDiscards.length > 0 && (
@@ -85,8 +88,8 @@ export function PlayerInfo({ player, isCurrentPlayer }: { player: Player; isCurr
             {faceUpDiscards.map((type) => getCardName(type)).join('、')}
           </div>
         )}
-        <div>俘虏: {player.captives.length}</div>
       </div>
+      
     </div>
   );
 }
@@ -185,6 +188,21 @@ function revealDisplayName(gameState: GameState, viewerId: PlayerId, playerId: P
   return nickname || (playerId === viewerId ? '你' : '对手');
 }
 
+/** Nuwa draw name is private to the drawer; opponent only sees that a card was drawn. */
+export function formatRevealEffectText(action: RevealedAction, viewerId: PlayerId): string {
+  if (
+    action.cardType === 'sacrificeNuwa' &&
+    !action.cancelled &&
+    action.drawnCardType
+  ) {
+    if (action.playerId === viewerId) {
+      return `从弃牌堆抽取 1 张牌（抽到的是「${getCardName(action.drawnCardType)}」，对方不可见）`;
+    }
+    return '从弃牌堆抽取 1 张牌';
+  }
+  return action.effectText;
+}
+
 export function RevealedActionView({
   action,
   gameState,
@@ -197,6 +215,7 @@ export function RevealedActionView({
   const isViewer = action.playerId === viewerId;
   const cardName = action.cardType ? getCardName(action.cardType) : '垂死一搏';
   const imageSrc = action.cardType ? CARD_IMAGES[action.cardType] : null;
+  const effectText = formatRevealEffectText(action, viewerId);
 
   return (
     <div
@@ -240,10 +259,10 @@ export function RevealedActionView({
           {action.cardType && (
             <div className="text-sm text-gray-300 mb-2">{getCardDescription(action.cardType)}</div>
           )}
-          {action.effectText && (
+          {effectText && (
             <div className="text-sm">
               <span className="text-yellow-400">结算：</span>
-              {action.effectText}
+              {effectText}
             </div>
           )}
         </div>

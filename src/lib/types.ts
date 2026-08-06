@@ -41,6 +41,8 @@ export interface RevealedAction {
   cancelled: boolean;
   /** Settlement result; empty while the round is still pending. */
   effectText: string;
+  /** Card drawn via 向女娲祭祀; shown only to the drawer in the UI. */
+  drawnCardType?: CardType;
 }
 
 export interface RoundReveal {

@@ -85,9 +85,15 @@ export function getPlayerLogName(state: GameState, playerId: PlayerId): string {
   return `${nickname} (${getPlayerRoleLabel(playerId)})`;
 }
 
+/** Total population = 本部落人口 + 俘虏人口. Used for final settlement. */
+export function getTotalPopulation(player: Player): number {
+  return player.population + player.captives.length;
+}
+
 function formatPlayerStatusLine(state: GameState, playerId: PlayerId): string {
   const player = state.players[playerId];
-  return `${getPlayerLogName(state, playerId)}: 人口 ${player.population} | 俘虏 ${player.captives.length}`;
+  const total = getTotalPopulation(player);
+  return `${getPlayerLogName(state, playerId)}: 本部落 ${player.population} | 俘虏 ${player.captives.length} | 总人口 ${total}`;
 }
 
 /** Can play 向蚩尤献祭 if any sacrifice tier is affordable. */
@@ -200,8 +206,9 @@ export function resolveRound(state: GameState): GameState {
   
   applyCounterEffects(newState, action1, action2, effect1, effect2, log);
   
-  const raid1 = resolveRaidIntent(newState, 'player1', effect1, log);
-  const raid2 = resolveRaidIntent(newState, 'player2', effect2, log);
+  // 献祭先于劫掠：已被献祭的俘虏不能同轮被夺回（劫掠改为掳掠）。
+  const raid1 = resolveRaidIntent(newState, 'player1', effect1, effect2, log);
+  const raid2 = resolveRaidIntent(newState, 'player2', effect2, effect1, log);
   
   applyAllEffects(newState, 'player1', effect1, raid1, 'player2', effect2, raid2, log);
   
@@ -239,7 +246,7 @@ export function resolveRound(state: GameState): GameState {
 
   // Final round: if neither side was KO'd, compare remaining population.
   if (wasFinalRound && newState.status === 'playing') {
-    finishByPopulationComparison(newState, log, '最后一轮结算完成，比较剩余人口');
+    finishByPopulationComparison(newState, log, '最后一轮结算完成，比较总人口');
   }
   
   newState.gameLog.push(...log);
@@ -307,7 +314,17 @@ function describeResolvedEffect(
     parts.push('从弃牌堆抽取 1 张牌');
   }
   
-  return parts.length > 0 ? parts.join('，') : '本轮无事发生';
+  if (parts.length > 0) {
+    return parts.join('，');
+  }
+
+  // 守夜 only counters 夜袭/劫掠; vs 献祭 etc. the watch does nothing, but the
+  // opponent's effect still resolves — don't imply the whole round was empty.
+  if (effect.type === 'nightWatch') {
+    return '守夜未生效（对方未打出夜袭或劫掠）';
+  }
+
+  return '本轮无事发生';
 }
 
 function buildRevealedAction(
@@ -324,6 +341,7 @@ function buildRevealedAction(
     populationCost: action.type === 'desperateStrike' ? action.populationCost : undefined,
     cancelled: effect.cancelled,
     effectText: describeResolvedEffect(effect, raid, counteredCardType),
+    drawnCardType: effect.drawnCardType,
   };
 }
 
@@ -373,6 +391,7 @@ function resolveRaidIntent(
   state: GameState,
   playerId: PlayerId,
   effect: ActionEffect,
+  opponentEffect: ActionEffect,
   log: string[]
 ): RaidIntent {
   if (effect.type !== 'raid' || effect.cancelled || effect.captivesGained === 0) {
@@ -381,14 +400,40 @@ function resolveRaidIntent(
   
   const opponentId = playerId === 'player1' ? 'player2' : 'player1';
   const opponent = state.players[opponentId];
-  const ownCaptivesHeldByOpponent = opponent.captives.filter(c => c.originalOwner === playerId);
+
+  // 向蚩尤献祭 removes captives before 劫掠 can reclaim them.
+  const sacrificed = opponentEffect.cancelled ? 0 : opponentEffect.captivesLost;
+  const captivesAfterSacrifice = opponent.captives.slice(sacrificed);
+  const ownCaptivesHeldByOpponent = captivesAfterSacrifice.filter(c => c.originalOwner === playerId);
+  const hadOwnCaptiveBeforeSacrifice = opponent.captives.some(c => c.originalOwner === playerId);
   
   if (ownCaptivesHeldByOpponent.length > 0) {
     log.push(`${getPlayerLogName(state, playerId)} 夺回 1 名族人`);
     return { active: true, rescue: true };
+  }
+
+  if (hadOwnCaptiveBeforeSacrifice && sacrificed > 0) {
+    log.push(
+      `${getPlayerLogName(state, playerId)} 本欲夺回族人，但该俘虏已被献祭，改为掳掠 1 名人口`,
+    );
   } else {
     log.push(`${getPlayerLogName(state, playerId)} 掳掠 1 名人口`);
-    return { active: true, rescue: false };
+  }
+  return { active: true, rescue: false };
+}
+
+/** Reduce total population: 本部落 first, then 俘虏. */
+function applyPopulationLoss(player: Player, amount: number): void {
+  if (amount <= 0) {
+    return;
+  }
+  let remaining = amount;
+  const fromTribe = Math.min(player.population, remaining);
+  player.population -= fromTribe;
+  remaining -= fromTribe;
+  while (remaining > 0 && player.captives.length > 0) {
+    player.captives.shift();
+    remaining -= 1;
   }
 }
 
@@ -406,8 +451,9 @@ function applyAllEffects(
   const p2 = state.players[pid2];
   
   if (!effect1.cancelled) {
+    // Own sacrifice / 垂死一搏 cost is always 本部落人口 (never captives).
     p1.population += effect1.populationChange;
-    p2.population -= effect1.opponentDamage;
+    applyPopulationLoss(p2, effect1.opponentDamage);
     if (effect1.captivesLost > 0) {
       p1.captives = p1.captives.slice(effect1.captivesLost);
     }
@@ -415,24 +461,43 @@ function applyAllEffects(
   
   if (!effect2.cancelled) {
     p2.population += effect2.populationChange;
-    p1.population -= effect2.opponentDamage;
+    applyPopulationLoss(p1, effect2.opponentDamage);
     if (effect2.captivesLost > 0) {
       p2.captives = p2.captives.slice(effect2.captivesLost);
     }
   }
   
   if (raid1.active && raid1.rescue) {
-    p2.captives = p2.captives.filter(c => !(c.originalOwner === pid1 && c.currentController === pid2));
+    const idx = p2.captives.findIndex(c => c.originalOwner === pid1 && c.currentController === pid2);
+    if (idx >= 0) {
+      p2.captives.splice(idx, 1);
+      p1.population += 1;
+    }
   } else if (raid1.active && !raid1.rescue) {
-    p2.population -= 1;
-    p1.captives.push({ originalOwner: pid2, currentController: pid1 });
+    // 掳掠普通人口：优先从本部落扣；若本部落已空则从俘虏中掳走一人。
+    if (p2.population > 0) {
+      p2.population -= 1;
+      p1.captives.push({ originalOwner: pid2, currentController: pid1 });
+    } else if (p2.captives.length > 0) {
+      p2.captives.shift();
+      p1.captives.push({ originalOwner: pid2, currentController: pid1 });
+    }
   }
   
   if (raid2.active && raid2.rescue) {
-    p1.captives = p1.captives.filter(c => !(c.originalOwner === pid2 && c.currentController === pid1));
+    const idx = p1.captives.findIndex(c => c.originalOwner === pid2 && c.currentController === pid1);
+    if (idx >= 0) {
+      p1.captives.splice(idx, 1);
+      p2.population += 1;
+    }
   } else if (raid2.active && !raid2.rescue) {
-    p1.population -= 1;
-    p2.captives.push({ originalOwner: pid1, currentController: pid2 });
+    if (p1.population > 0) {
+      p1.population -= 1;
+      p2.captives.push({ originalOwner: pid1, currentController: pid2 });
+    } else if (p1.captives.length > 0) {
+      p1.captives.shift();
+      p2.captives.push({ originalOwner: pid1, currentController: pid2 });
+    }
   }
   
   if (effect1.cancelled) {
@@ -443,10 +508,10 @@ function applyAllEffects(
   }
   
   if (effect1.cardDrawn) {
-    handleCardDraw(state, pid1, log);
+    handleCardDraw(state, pid1, log, effect1);
   }
   if (effect2.cardDrawn) {
-    handleCardDraw(state, pid2, log);
+    handleCardDraw(state, pid2, log, effect2);
   }
   
   p1.population = Math.max(0, p1.population);
@@ -465,7 +530,12 @@ function clearFaceUpDiscards(state: GameState): void {
   state.players.player2.faceUpDiscards = [];
 }
 
-function handleCardDraw(state: GameState, playerId: PlayerId, log: string[]): void {
+function handleCardDraw(
+  state: GameState,
+  playerId: PlayerId,
+  log: string[],
+  effect: ActionEffect,
+): void {
   if (!state.nuwaDrawHistory) {
     state.nuwaDrawHistory = [];
   }
@@ -492,6 +562,7 @@ function handleCardDraw(state: GameState, playerId: PlayerId, log: string[]): vo
       cardType: drawnCard.type,
       cardId: drawnCard.id,
     });
+    effect.drawnCardType = drawnCard.type;
 
     // Full draw info stays in nuwaDrawHistory / localStorage; log marker is filtered per viewer.
     log.push(formatNuwaDrawLogMarker(playerId, drawnCard.type));
@@ -506,6 +577,7 @@ interface ActionEffect {
   captivesGained: number;
   captivesLost: number;
   cardDrawn: boolean;
+  drawnCardType?: CardType;
 }
 
 function resolveAction(
@@ -647,8 +719,8 @@ function moveCardsToDiscard(
 }
 
 function checkWinCondition(state: GameState, log: string[]): void {
-  const p1Dead = state.players.player1.population <= 0;
-  const p2Dead = state.players.player2.population <= 0;
+  const p1Dead = getTotalPopulation(state.players.player1) <= 0;
+  const p2Dead = getTotalPopulation(state.players.player2) <= 0;
   
   if (p1Dead && p2Dead) {
     state.status = 'finished';
@@ -669,8 +741,8 @@ function checkWinCondition(state: GameState, log: string[]): void {
 }
 
 function finishByPopulationComparison(state: GameState, log: string[], reason: string): void {
-  const p1 = state.players.player1.population;
-  const p2 = state.players.player2.population;
+  const p1 = getTotalPopulation(state.players.player1);
+  const p2 = getTotalPopulation(state.players.player2);
   state.status = 'finished';
   state.endReason = 'population';
   log.push(`\n--- ${reason} ---`);
@@ -678,13 +750,13 @@ function finishByPopulationComparison(state: GameState, log: string[], reason: s
 
   if (p1 > p2) {
     state.winner = 'player1';
-    log.push(`\n=== 游戏结束：人口较多，${getPlayerLogName(state, 'player1')} 获胜！ ===`);
+    log.push(`\n=== 游戏结束：总人口较多，${getPlayerLogName(state, 'player1')} 获胜！ ===`);
   } else if (p2 > p1) {
     state.winner = 'player2';
-    log.push(`\n=== 游戏结束：人口较多，${getPlayerLogName(state, 'player2')} 获胜！ ===`);
+    log.push(`\n=== 游戏结束：总人口较多，${getPlayerLogName(state, 'player2')} 获胜！ ===`);
   } else {
     state.winner = 'draw';
-    log.push('\n=== 游戏结束：人口相同，平局！ ===');
+    log.push('\n=== 游戏结束：总人口相同，平局！ ===');
   }
 }
 
@@ -699,7 +771,7 @@ export function applyRoundStartChecks(state: GameState): void {
 
   if (p1Empty && p2Empty) {
     const log: string[] = [];
-    finishByPopulationComparison(state, log, '双方均无手牌，比较人口');
+    finishByPopulationComparison(state, log, '双方均无手牌，比较总人口');
     state.gameLog.push(...log);
     return;
   }
