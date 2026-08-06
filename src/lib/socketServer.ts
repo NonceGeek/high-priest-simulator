@@ -115,6 +115,11 @@ export function setupSocketServer(httpServer: HTTPServer) {
           callback(false, 'Cannot use desperate strike with cards in hand');
           return;
         }
+        const otherPlayerId = playerId === 'player1' ? 'player2' : 'player1';
+        if (room.gameState.players[otherPlayerId].hand.length === 0) {
+          callback(false, '双方均无手牌时应直接比较人口，不能发动垂死一搏');
+          return;
+        }
         if (action.populationCost < 1 || action.populationCost > 3 || action.populationCost > player.population) {
           callback(false, 'Invalid population cost');
           return;

@@ -11,6 +11,7 @@ function normalizeGameState(state: GameState): GameState {
     ...state,
     nuwaDrawHistory: state.nuwaDrawHistory ?? [],
     lastReveal: state.lastReveal ?? null,
+    endReason: state.endReason ?? null,
     players: {
       player1: {
         ...state.players.player1,
@@ -159,9 +160,22 @@ export default function GamePage() {
       <GameUI gameState={gameState} playerId={playerId} onActionSelect={handleActionSelect} />
       {showGameEndDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-gray-800 text-white rounded-lg shadow-2xl p-8 max-w-sm w-full text-center">
+          <div className="bg-gray-800 text-white rounded-lg shadow-2xl p-8 max-w-md w-full text-center">
             <h2 className="text-2xl font-bold mb-2">游戏结束</h2>
-            <p className="text-gray-300 mb-6">选择下一步操作</p>
+            {gameState.endReason === 'population' ? (
+              <div className="text-gray-300 mb-6 space-y-3">
+                <p>双方部落都耗尽了手上的资源，进入了最惨烈的肉搏战……</p>
+                <p className="text-yellow-300 font-semibold">
+                  {gameState.winner === 'draw'
+                    ? '最终无人获胜。'
+                    : `${
+                        gameState.players[gameState.winner!].nickname?.trim() || '祭司'
+                      }的部落获得了最终胜利。`}
+                </p>
+              </div>
+            ) : (
+              <p className="text-gray-300 mb-6">选择下一步操作</p>
+            )}
             <div className="space-y-3">
               <button
                 type="button"

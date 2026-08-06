@@ -143,16 +143,27 @@ export function GameLog({
   );
 }
 
-export function DesperateStrikePanel({ player, onSelect }: { player: Player; onSelect: (cost: number) => void }) {
-  if (player.hand.length > 0) {
+export function DesperateStrikePanel({
+  player,
+  opponent,
+  onSelect,
+}: {
+  player: Player;
+  opponent: Player;
+  onSelect: (cost: number) => void;
+}) {
+  if (player.hand.length > 0 || opponent.hand.length === 0) {
     return null;
   }
   
   const maxCost = Math.min(3, player.population);
+  if (maxCost < 1) {
+    return null;
+  }
   
   return (
     <div className="bg-orange-900 text-white p-4 rounded-lg">
-      <div className="font-bold mb-2">垂死一搏</div>
+      <div className="font-bold mb-2">垂死一搏（最后一轮）</div>
       <div className="mb-2">选择投入人口 (1-{maxCost})</div>
       <div className="flex gap-2">
         {Array.from({ length: maxCost }, (_, i) => i + 1).map(cost => (
@@ -326,6 +337,7 @@ export function GameUI({ gameState, playerId, onActionSelect }: GameUIProps) {
             {currentPlayer.hand.length === 0 && (
               <DesperateStrikePanel
                 player={currentPlayer}
+                opponent={opponent}
                 onSelect={(cost) => onActionSelect({ type: 'desperateStrike', populationCost: cost })}
               />
             )}

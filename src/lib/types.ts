@@ -56,6 +56,8 @@ export interface GameState {
   currentRound: number;
   status: 'waiting' | 'playing' | 'finished';
   winner: PlayerId | 'draw' | null;
+  /** How the game ended; null while still in progress. */
+  endReason: 'knockout' | 'population' | null;
   selectedActions: Record<PlayerId, Action | null>;
   gameLog: string[];
   /** Both players' Nuwa draws — stored in full; console hides the opponent's card. */

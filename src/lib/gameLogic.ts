@@ -54,6 +54,7 @@ export function createGameState(roomId: string): GameState {
     currentRound: 1,
     status: 'waiting',
     winner: null,
+    endReason: null,
     selectedActions: {
       player1: null,
       player2: null,
@@ -146,12 +147,15 @@ function resolveChiyouSacrifice(player: Player): {
   return null;
 }
 
-export function canDesperateStrike(player: Player): boolean {
-  return player.hand.length === 0 && player.population > 0;
+export function canDesperateStrike(player: Player, opponent: Player): boolean {
+  // Only in the final round: you have no cards, opponent still has cards.
+  return player.hand.length === 0 && opponent.hand.length > 0 && player.population > 0;
 }
 
 export function getAvailableActions(player: Player, state: GameState): Action[] {
   const actions: Action[] = [];
+  const opponentId = player.id === 'player1' ? 'player2' : 'player1';
+  const opponent = state.players[opponentId];
   
   player.hand.forEach(card => {
     if (card.type === 'sacrificeChiyou' && !canPlaySacrificeChiyou(player)) {
@@ -163,7 +167,7 @@ export function getAvailableActions(player: Player, state: GameState): Action[] 
     actions.push({ type: 'card', cardId: card.id });
   });
   
-  if (canDesperateStrike(player)) {
+  if (canDesperateStrike(player, opponent)) {
     const maxCost = Math.min(3, player.population);
     for (let i = 1; i <= maxCost; i++) {
       actions.push({ type: 'desperateStrike', populationCost: i });
@@ -229,10 +233,23 @@ export function resolveRound(state: GameState): GameState {
   log.push(`${formatPlayerStatusLine(newState, 'player1')}    ${formatPlayerStatusLine(newState, 'player2')}`);
   
   checkWinCondition(newState, log);
+
+  const wasFinalRound =
+    action1.type === 'desperateStrike' || action2.type === 'desperateStrike';
+
+  // Final round: if neither side was KO'd, compare remaining population.
+  if (wasFinalRound && newState.status === 'playing') {
+    finishByPopulationComparison(newState, log, '最后一轮结算完成，比较剩余人口');
+  }
   
   newState.gameLog.push(...log);
   newState.selectedActions = { player1: null, player2: null };
   newState.currentRound++;
+
+  // Next round start: both empty → immediate population compare; one empty → announce final round.
+  if (newState.status === 'playing') {
+    applyRoundStartChecks(newState);
+  }
   
   return newState;
 }
@@ -636,15 +653,62 @@ function checkWinCondition(state: GameState, log: string[]): void {
   if (p1Dead && p2Dead) {
     state.status = 'finished';
     state.winner = 'draw';
+    state.endReason = 'knockout';
     log.push('\n=== 游戏结束：平局！ ===');
   } else if (p1Dead) {
     state.status = 'finished';
     state.winner = 'player2';
+    state.endReason = 'knockout';
     log.push(`\n=== 游戏结束：${getPlayerLogName(state, 'player2')} 获胜！ ===`);
   } else if (p2Dead) {
     state.status = 'finished';
     state.winner = 'player1';
+    state.endReason = 'knockout';
     log.push(`\n=== 游戏结束：${getPlayerLogName(state, 'player1')} 获胜！ ===`);
+  }
+}
+
+function finishByPopulationComparison(state: GameState, log: string[], reason: string): void {
+  const p1 = state.players.player1.population;
+  const p2 = state.players.player2.population;
+  state.status = 'finished';
+  state.endReason = 'population';
+  log.push(`\n--- ${reason} ---`);
+  log.push(`${formatPlayerStatusLine(state, 'player1')}    ${formatPlayerStatusLine(state, 'player2')}`);
+
+  if (p1 > p2) {
+    state.winner = 'player1';
+    log.push(`\n=== 游戏结束：人口较多，${getPlayerLogName(state, 'player1')} 获胜！ ===`);
+  } else if (p2 > p1) {
+    state.winner = 'player2';
+    log.push(`\n=== 游戏结束：人口较多，${getPlayerLogName(state, 'player2')} 获胜！ ===`);
+  } else {
+    state.winner = 'draw';
+    log.push('\n=== 游戏结束：人口相同，平局！ ===');
+  }
+}
+
+/** Round-start hand checks after a settled round (or when joining mid-flow). */
+export function applyRoundStartChecks(state: GameState): void {
+  if (state.status !== 'playing') {
+    return;
+  }
+
+  const p1Empty = state.players.player1.hand.length === 0;
+  const p2Empty = state.players.player2.hand.length === 0;
+
+  if (p1Empty && p2Empty) {
+    const log: string[] = [];
+    finishByPopulationComparison(state, log, '双方均无手牌，比较人口');
+    state.gameLog.push(...log);
+    return;
+  }
+
+  if (p1Empty || p2Empty) {
+    const emptyId: PlayerId = p1Empty ? 'player1' : 'player2';
+    state.gameLog.push(
+      `\n--- Round ${state.currentRound}：最后一轮（${getPlayerLogName(state, emptyId)} 无手牌，发动垂死一搏） ---`,
+    );
   }
 }
 
