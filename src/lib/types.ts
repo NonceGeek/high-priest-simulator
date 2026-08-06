@@ -32,6 +32,24 @@ export interface NuwaDraw {
   cardId: string;
 }
 
+export interface RevealedAction {
+  playerId: PlayerId;
+  /** null when the action was 垂死一搏. */
+  cardType: CardType | null;
+  /** Population invested in 垂死一搏. */
+  populationCost?: number;
+  cancelled: boolean;
+  /** Settlement result; empty while the round is still pending. */
+  effectText: string;
+}
+
+export interface RoundReveal {
+  round: number;
+  /** false while both actions are locked but not yet settled. */
+  resolved: boolean;
+  actions: Record<PlayerId, RevealedAction>;
+}
+
 export interface GameState {
   id: string;
   players: Record<PlayerId, Player>;
@@ -42,6 +60,8 @@ export interface GameState {
   gameLog: string[];
   /** Both players' Nuwa draws — stored in full; console hides the opponent's card. */
   nuwaDrawHistory: NuwaDraw[];
+  /** Cards both players revealed in the most recent settled round. */
+  lastReveal: RoundReveal | null;
 }
 
 export type ActionType = 'card' | 'desperateStrike';

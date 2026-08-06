@@ -10,6 +10,7 @@ function normalizeGameState(state: GameState): GameState {
   return {
     ...state,
     nuwaDrawHistory: state.nuwaDrawHistory ?? [],
+    lastReveal: state.lastReveal ?? null,
     players: {
       player1: {
         ...state.players.player1,

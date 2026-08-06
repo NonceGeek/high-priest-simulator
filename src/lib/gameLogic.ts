@@ -1,4 +1,14 @@
-import { Card, CardType, Player, PlayerId, GameState, Action, Captive } from './types';
+import {
+  Card,
+  CardType,
+  Player,
+  PlayerId,
+  GameState,
+  Action,
+  Captive,
+  RevealedAction,
+  RoundReveal,
+} from './types';
 import { v4 as uuidv4 } from 'uuid';
 
 const INITIAL_POPULATION = 15;
@@ -50,6 +60,7 @@ export function createGameState(roomId: string): GameState {
     },
     gameLog: ['游戏已创建，等待玩家加入...'],
     nuwaDrawHistory: [],
+    lastReveal: null,
   };
 }
 
@@ -177,6 +188,9 @@ export function resolveRound(state: GameState): GameState {
     `${formatPlayerStatusLine(newState, 'player1')}    ${formatPlayerStatusLine(newState, 'player2')}`,
   ];
 
+  const cardType1 = getActionCardType(newState, 'player1', action1);
+  const cardType2 = getActionCardType(newState, 'player2', action2);
+  
   let effect1 = resolveAction(newState, 'player1', action1, log);
   let effect2 = resolveAction(newState, 'player2', action2, log);
   
@@ -186,6 +200,29 @@ export function resolveRound(state: GameState): GameState {
   const raid2 = resolveRaidIntent(newState, 'player2', effect2, log);
   
   applyAllEffects(newState, 'player1', effect1, raid1, 'player2', effect2, raid2, log);
+  
+  newState.lastReveal = {
+    round: newState.currentRound,
+    resolved: true,
+    actions: {
+      player1: buildRevealedAction(
+        'player1',
+        action1,
+        cardType1,
+        effect1,
+        raid1,
+        getCounteredCardType(cardType1, cardType2, effect2),
+      ),
+      player2: buildRevealedAction(
+        'player2',
+        action2,
+        cardType2,
+        effect2,
+        raid2,
+        getCounteredCardType(cardType2, cardType1, effect1),
+      ),
+    },
+  };
   
   moveCardsToDiscard(newState, action1, action2);
 
@@ -203,6 +240,116 @@ export function resolveRound(state: GameState): GameState {
 interface RaidIntent {
   active: boolean;
   rescue: boolean;
+}
+
+function getActionCardType(state: GameState, playerId: PlayerId, action: Action): CardType | null {
+  if (action.type !== 'card') {
+    return null;
+  }
+  return state.players[playerId].hand.find(c => c.id === action.cardId)?.type ?? null;
+}
+
+function describeResolvedEffect(
+  effect: ActionEffect,
+  raid: RaidIntent,
+  counteredCardType: CardType | null,
+): string {
+  if (effect.type === 'desperateStrike') {
+    return `牺牲 ${-effect.populationChange} 人口，对敌方造成 ${effect.opponentDamage} 点伤害`;
+  }
+  
+  if (effect.cancelled) {
+    // Only 夜袭/劫掠 can be countered; the sacrifices fail for lack of payment instead.
+    if (effect.type === 'sacrificeChiyou') {
+      return '祭品不足，献祭无效';
+    }
+    if (effect.type === 'sacrificeNuwa') {
+      return '弃牌堆可抽取的牌不足，祭祀无效';
+    }
+    return '被守夜抵消';
+  }
+  
+  const parts: string[] = [];
+  
+  if (counteredCardType) {
+    parts.push(`抵消了对方的${getCardName(counteredCardType)}`);
+  }
+  if (effect.captivesLost > 0) {
+    parts.push(`献祭 ${effect.captivesLost} 名俘虏`);
+  }
+  if (effect.populationChange < 0) {
+    parts.push(`牺牲 ${-effect.populationChange} 人口`);
+  }
+  if (effect.opponentDamage > 0) {
+    parts.push(`对敌方造成 ${effect.opponentDamage} 点伤害`);
+  }
+  if (raid.active) {
+    parts.push(raid.rescue ? '夺回 1 名族人' : '掳掠 1 名人口');
+  }
+  if (effect.cardDrawn) {
+    parts.push('从弃牌堆抽取 1 张牌');
+  }
+  
+  return parts.length > 0 ? parts.join('，') : '本轮无事发生';
+}
+
+function buildRevealedAction(
+  playerId: PlayerId,
+  action: Action,
+  cardType: CardType | null,
+  effect: ActionEffect,
+  raid: RaidIntent,
+  counteredCardType: CardType | null,
+): RevealedAction {
+  return {
+    playerId,
+    cardType,
+    populationCost: action.type === 'desperateStrike' ? action.populationCost : undefined,
+    cancelled: effect.cancelled,
+    effectText: describeResolvedEffect(effect, raid, counteredCardType),
+  };
+}
+
+/** What this player's 守夜 shut down, if anything. */
+function getCounteredCardType(
+  cardType: CardType | null,
+  opponentCardType: CardType | null,
+  opponentEffect: ActionEffect,
+): CardType | null {
+  if (cardType !== 'nightWatch' || !opponentEffect.cancelled) {
+    return null;
+  }
+  return opponentCardType === 'raid' || opponentCardType === 'nightRaid' ? opponentCardType : null;
+}
+
+/**
+ * Reveal for the moment both actions are locked but not yet settled. Safe to show
+ * to both players because neither can change their choice anymore.
+ */
+export function buildPendingReveal(state: GameState): RoundReveal | null {
+  const action1 = state.selectedActions.player1;
+  const action2 = state.selectedActions.player2;
+  
+  if (!action1 || !action2) {
+    return null;
+  }
+  
+  const describe = (playerId: PlayerId, action: Action): RevealedAction => ({
+    playerId,
+    cardType: getActionCardType(state, playerId, action),
+    populationCost: action.type === 'desperateStrike' ? action.populationCost : undefined,
+    cancelled: false,
+    effectText: '',
+  });
+  
+  return {
+    round: state.currentRound,
+    resolved: false,
+    actions: {
+      player1: describe('player1', action1),
+      player2: describe('player2', action2),
+    },
+  };
 }
 
 function resolveRaidIntent(
