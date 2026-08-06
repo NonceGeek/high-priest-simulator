@@ -167,42 +167,35 @@ export default function GamePage() {
               const bothHaveHands =
                 gameState.players.player1.hand.length > 0 &&
                 gameState.players.player2.hand.length > 0;
+              const bothWipedOut =
+                getTotalPopulation(gameState.players.player1) <= 0 &&
+                getTotalPopulation(gameState.players.player2) <= 0;
+              const outcome =
+                gameState.winner === 'draw'
+                  ? '最终无人获胜。'
+                  : `${
+                      gameState.players[gameState.winner!]?.nickname?.trim() || '祭司'
+                    }的部落获得了最终胜利。`;
 
+              let flavor: string | null = null;
               if (gameState.endReason === 'population') {
-                return (
-                  <div className="text-gray-300 mb-6 space-y-3">
-                    <p>双方部落都耗尽了手上的资源，进入了最惨烈的肉搏战……</p>
+                flavor = '双方部落都耗尽了手上的资源，进入了最惨烈的肉搏战……';
+              } else if (gameState.endReason === 'knockout' && bothHaveHands && bothWipedOut) {
+                flavor = '双方部众皆已阵亡，只有两位祭司在战场上默默地看着对方……';
+              }
+
+              return (
+                <div className="text-gray-300 mb-6 space-y-3">
+                  {flavor && <p>{flavor}</p>}
+                  {gameState.endReason === 'population' && (
                     <p className="text-sm text-gray-400">
                       总人口 {getTotalPopulation(gameState.players.player1)} vs{' '}
                       {getTotalPopulation(gameState.players.player2)}
                     </p>
-                    <p className="text-yellow-300 font-semibold">
-                      {gameState.winner === 'draw'
-                        ? '最终无人获胜。'
-                        : `${
-                            gameState.players[gameState.winner!].nickname?.trim() || '祭司'
-                          }的部落获得了最终胜利。`}
-                    </p>
-                  </div>
-                );
-              }
-
-              // Both still hold cards, but tribes were wiped out (e.g. mutual 献祭).
-              if (
-                gameState.endReason === 'knockout' &&
-                bothHaveHands &&
-                getTotalPopulation(gameState.players.player1) <= 0 &&
-                getTotalPopulation(gameState.players.player2) <= 0
-              ) {
-                return (
-                  <div className="text-gray-300 mb-6 space-y-3">
-                    <p>双方部众皆已阵亡，只有两位祭司在战场上默默地看着对方……</p>
-                    <p className="text-yellow-300 font-semibold">最终无人获胜。</p>
-                  </div>
-                );
-              }
-
-              return <p className="text-gray-300 mb-6">选择下一步操作</p>;
+                  )}
+                  <p className="text-yellow-300 font-semibold">{outcome}</p>
+                </div>
+              );
             })()}
             <div className="space-y-3">
               <button
