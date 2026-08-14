@@ -662,28 +662,22 @@ function applyCounterEffects(
   const type2 = action2.type === 'card' ? state.players.player2.hand.find(c => c.id === action2.cardId)?.type : null;
   
   if (type1 === 'nightWatch') {
-    if (type2 === 'nightRaid') {
+    if (type2 === 'nightRaid' || type2 === 'raid') {
       effect2.cancelled = true;
       effect2.opponentDamage = 0;
-      effect1.opponentDamage = 1;
-      log.push('守夜抵消了夜袭！对敌方造成 1 点伤害');
-    } else if (type2 === 'raid') {
-      effect2.cancelled = true;
       effect2.captivesGained = 0;
-      log.push('守夜抵消了劫掠！');
+      effect1.opponentDamage = 1;
+      log.push(`守夜抵消了${getCardName(type2)}！对敌方造成 1 点伤害`);
     }
   }
   
   if (type2 === 'nightWatch') {
-    if (type1 === 'nightRaid') {
+    if (type1 === 'nightRaid' || type1 === 'raid') {
       effect1.cancelled = true;
       effect1.opponentDamage = 0;
-      effect2.opponentDamage = 1;
-      log.push('守夜抵消了夜袭！对敌方造成 1 点伤害');
-    } else if (type1 === 'raid') {
-      effect1.cancelled = true;
       effect1.captivesGained = 0;
-      log.push('守夜抵消了劫掠！');
+      effect2.opponentDamage = 1;
+      log.push(`守夜抵消了${getCardName(type1)}！对敌方造成 1 点伤害`);
     }
   }
 }
@@ -741,23 +735,29 @@ function checkWinCondition(state: GameState, log: string[]): void {
 }
 
 function finishByPopulationComparison(state: GameState, log: string[], reason: string): void {
-  const p1 = getTotalPopulation(state.players.player1);
-  const p2 = getTotalPopulation(state.players.player2);
+  const p1Pop = getTotalPopulation(state.players.player1);
+  const p2Pop = getTotalPopulation(state.players.player2);
+  const p1Captives = state.players.player1.captives.length;
+  const p2Captives = state.players.player2.captives.length;
   state.status = 'finished';
   state.endReason = 'population';
   log.push(`\n--- ${reason} ---`);
   log.push(`${formatPlayerStatusLine(state, 'player1')}    ${formatPlayerStatusLine(state, 'player2')}`);
 
-  if (p1 > p2) {
-    state.winner = 'player1';
-    log.push(`\n=== 游戏结束：总人口较多，${getPlayerLogName(state, 'player1')} 获胜！ ===`);
-  } else if (p2 > p1) {
-    state.winner = 'player2';
-    log.push(`\n=== 游戏结束：总人口较多，${getPlayerLogName(state, 'player2')} 获胜！ ===`);
-  } else {
-    state.winner = 'draw';
-    log.push('\n=== 游戏结束：总人口相同，平局！ ===');
+  if (p1Pop !== p2Pop) {
+    state.winner = p1Pop > p2Pop ? 'player1' : 'player2';
+    log.push(`\n=== 游戏结束：总人口较多，${getPlayerLogName(state, state.winner)} 获胜！ ===`);
+    return;
   }
+
+  if (p1Captives !== p2Captives) {
+    state.winner = p1Captives > p2Captives ? 'player1' : 'player2';
+    log.push(`\n=== 游戏结束：总人口相同，俘虏较多，${getPlayerLogName(state, state.winner)} 获胜！ ===`);
+    return;
+  }
+
+  state.winner = 'draw';
+  log.push('\n=== 游戏结束：总人口与俘虏均相同，平局！ ===');
 }
 
 /** Round-start hand checks after a settled round (or when joining mid-flow). */

@@ -18,7 +18,7 @@ export function getCardDescription(type: CardType): string {
   const descriptions: Record<CardType, string> = {
     raid: '从敌方部落转移 1 人口至你的部落',
     nightRaid: '对敌方部落造成 3 点人口伤害',
-    nightWatch: '抵消敌方夜袭或劫掠，若对方夜袭则对敌方部落造成 1 点伤害',
+    nightWatch: '抵消敌方夜袭或劫掠，并反击 1 点伤害',
     sacrificeChiyou: '献祭 2 俘虏→6 伤，1 俘虏→4 伤，2 人口→4 伤（按优先级自动选择）',
     sacrificeNuwa: '从弃牌堆随机抽取 1 张牌（需至少 3 张牌）',
   };

@@ -191,6 +191,9 @@ export default function GamePage() {
                     <p className="text-sm text-gray-400">
                       总人口 {getTotalPopulation(gameState.players.player1)} vs{' '}
                       {getTotalPopulation(gameState.players.player2)}
+                      {' · '}
+                      俘虏 {gameState.players.player1.captives.length} vs{' '}
+                      {gameState.players.player2.captives.length}
                     </p>
                   )}
                   <p className="text-yellow-300 font-semibold">{outcome}</p>
