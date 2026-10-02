@@ -1,3 +1,4 @@
+/** 实现大祭司卡牌规则、初始状态和回合结算；状态版本由房间事务递增。 */
 import {
   Card,
   CardType,
@@ -44,9 +45,16 @@ export function createPlayer(id: PlayerId): Player {
   };
 }
 
+/**
+ * 创建尚未有第二位玩家的初始对局。
+ * @param roomId 服务器分配的房间标识。
+ * @returns 版本为零的完整初始游戏状态。
+ * @Callers socketServer.handleCreateRoom。
+ */
 export function createGameState(roomId: string): GameState {
   return {
     id: roomId,
+    revision: 0,
     players: {
       player1: createPlayer('player1'),
       player2: createPlayer('player2'),

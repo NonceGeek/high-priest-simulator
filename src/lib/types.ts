@@ -1,3 +1,4 @@
+/** 定义游戏规则、持久房间及客户端和服务器之间的唯一通信协议。 */
 export type CardType = 'raid' | 'nightRaid' | 'nightWatch' | 'sacrificeChiyou' | 'sacrificeNuwa';
 
 export interface Card {
@@ -54,6 +55,8 @@ export interface RoundReveal {
 
 export interface GameState {
   id: string;
+  /** 房间状态版本从 0 开始；服务器只在实际状态变化时递增。 */
+  revision: number;
   players: Record<PlayerId, Player>;
   currentRound: number;
   status: 'waiting' | 'playing' | 'finished';
@@ -86,4 +89,34 @@ export interface Room {
   id: string;
   gameState: GameState;
   createdAt: number;
+  revision: number;
+  /** 仅由 Redis 保存，不包含在 GameState 广播中。 */
+  sessionTokenHashes: Partial<Record<PlayerId, string>>;
+}
+
+export interface RoomSession {
+  roomId: string;
+  playerId: PlayerId;
+  token: string;
+}
+
+export type SocketResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: string };
+
+export interface ActionRequest {
+  round: number;
+  action: Action;
+}
+
+export interface ClientToServerEvents {
+  createRoom: (nickname: string, ack: (result: SocketResult<RoomSession>) => void) => void;
+  joinRoom: (roomId: string, nickname: string, ack: (result: SocketResult<RoomSession>) => void) => void;
+  selectAction: (request: ActionRequest, ack: (result: SocketResult<GameState>) => void) => void;
+  getGameState: (ack: (result: SocketResult<GameState>) => void) => void;
+}
+
+export interface ServerToClientEvents {
+  gameState: (state: GameState) => void;
+  serverError: (message: string) => void;
 }

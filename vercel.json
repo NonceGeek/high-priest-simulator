@@ -1,23 +1,35 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "server.ts",
-      "use": "@vercel/node"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "frontend": {
+      "root": ".",
+      "framework": "nextjs",
+      "installCommand": "npm ci",
+      "buildCommand": "npm run build",
+      "devCommand": "next dev"
     },
-    {
-      "src": "next.config.ts",
-      "use": "@vercel/next"
+    "socket": {
+      "root": ".",
+      "runtime": "node",
+      "entrypoint": "api/socket-io.mts",
+      "installCommand": "npm ci",
+      "buildCommand": "npm run typecheck:server",
+      "devCommand": "tsx api/socket-io.mts",
+      "functions": {
+        "api/socket-io.mts": {
+          "maxDuration": 300
+        }
+      }
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/socket.io/(.*)",
-      "dest": "server.ts"
+      "source": "/api/socket-io/socket.io/(.*)",
+      "destination": { "service": "socket" }
     },
     {
-      "src": "/(.*)",
-      "dest": "server.ts"
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
     }
   ]
 }
