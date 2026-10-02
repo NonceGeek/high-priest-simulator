@@ -1,21 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
+    "target": "ES2022",
+    "module": "NodeNext",
+    "lib": ["ES2022"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node",
-    "outDir": "./dist",
-    "rootDir": ".",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["server.ts", "src/lib/socketServer.ts", "src/lib/gameLogic.ts", "src/lib/types.ts"],
+  "include": ["server.ts", "api/socket-io.mts", "src/lib/socketServer.ts", "src/lib/roomStore.ts", "src/lib/gameLogic.ts", "src/lib/types.ts"],
   "exclude": ["node_modules"]
 }

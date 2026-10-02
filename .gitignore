@@ -38,3 +38,6 @@ next-env.d.ts
 *.swp
 *.swo
 *~
+
+# generated server output
+/dist/
